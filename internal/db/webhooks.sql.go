@@ -7,29 +7,34 @@ package db
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 const createWebhook = `-- name: CreateWebhook :one
-INSERT INTO webhooks (tenant_id, name, secret, source)
-VALUES ($1, $2, $3, $4)
+INSERT INTO webhooks (id, tenant_id, name, secret, source, created_at)
+VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING id, tenant_id, name, secret, source, created_at
 `
 
 type CreateWebhookParams struct {
-	TenantID uuid.UUID `json:"tenant_id"`
-	Name     string    `json:"name"`
-	Secret   string    `json:"secret"`
-	Source   string    `json:"source"`
+	ID        uuid.UUID    `json:"id"`
+	TenantID  uuid.UUID    `json:"tenant_id"`
+	Name      string       `json:"name"`
+	Secret    string       `json:"secret"`
+	Source    string       `json:"source"`
+	CreatedAt sql.NullTime `json:"created_at"`
 }
 
 func (q *Queries) CreateWebhook(ctx context.Context, arg CreateWebhookParams) (Webhook, error) {
 	row := q.db.QueryRowContext(ctx, createWebhook,
+		arg.ID,
 		arg.TenantID,
 		arg.Name,
 		arg.Secret,
 		arg.Source,
+		arg.CreatedAt,
 	)
 	var i Webhook
 	err := row.Scan(
