@@ -3,20 +3,22 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"github.com/turbolytics/sqlsec/internal/auth"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/turbolytics/sqlsec/internal"
 	"github.com/turbolytics/sqlsec/internal/db"
 )
 
 type CreateWebhookRequest struct {
-	TenantID string `json:"tenant_id"`
-	Name     string `json:"name"`
-	Source   string `json:"source"`
-	Secret   string `json:"secret"`
+	Name   string   `json:"name"`
+	Source string   `json:"source"`
+	Events []string `json:"events"`
 }
 
 type Server struct {
@@ -43,24 +45,29 @@ func (wh *Webhook) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID, err := uuid.Parse(req.TenantID)
-	if err != nil {
-		http.Error(w, "invalid tenant_id", http.StatusBadRequest)
-		return
-	}
+	// Hardcoded tenant_id for now
+	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
 	id := uuid.New()
 	createdAt := time.Now().UTC()
+	secret, err := auth.GenerateSecret()
+	if err != nil {
+		wh.logger.Error("failed to generate secret", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	hook, err := wh.queries.CreateWebhook(r.Context(), db.CreateWebhookParams{
 		ID:        id,
 		TenantID:  tenantID,
 		Name:      req.Name,
-		Secret:    req.Secret,
+		Secret:    secret,
 		Source:    req.Source,
+		Events:    mustMarshalEvents(req.Events),
 		CreatedAt: sql.NullTime{Time: createdAt, Valid: true},
 	})
 	if err != nil {
+		wh.logger.Error("failed to create webhook", zap.Error(err))
 		http.Error(w, "failed to create webhook", http.StatusInternalServerError)
 		return
 	}
@@ -72,7 +79,60 @@ func (wh *Webhook) Create(w http.ResponseWriter, r *http.Request) {
 		Secret:    hook.Secret,
 		Source:    hook.Source,
 		CreatedAt: hook.CreatedAt.Time,
+		Events:    mustUnmarshalEvents(hook.Events),
 	}
+	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (wh *Webhook) Get(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "invalid webhook id", http.StatusBadRequest)
+		return
+	}
+	// Hardcoded tenant_id for now
+	tid := uuid.MustParse("00000000-0000-0000-0000-000000000000")
+
+	webhook, err := wh.queries.GetWebhook(r.Context(), db.GetWebhookParams{
+		ID:       id,
+		TenantID: tid,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, "webhook not found", http.StatusNotFound)
+			return
+		}
+		wh.logger.Error("failed to get webhook", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(internal.Webhook{
+		ID:        webhook.ID,
+		TenantID:  webhook.TenantID,
+		Name:      webhook.Name,
+		Secret:    webhook.Secret,
+		Source:    webhook.Source,
+		CreatedAt: webhook.CreatedAt.Time,
+	})
+}
+
+func mustMarshalEvents(events []string) []byte {
+	data, err := json.Marshal(events)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
+func mustUnmarshalEvents(data []byte) []string {
+	var events []string
+	if err := json.Unmarshal(data, &events); err != nil {
+		panic(err)
+	}
+	return events
 }

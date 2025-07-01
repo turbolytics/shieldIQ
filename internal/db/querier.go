@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	CreateWebhook(ctx context.Context, arg CreateWebhookParams) (Webhook, error)
+	GetWebhook(ctx context.Context, arg GetWebhookParams) (Webhook, error)
 }
 
 var _ Querier = (*Queries)(nil)

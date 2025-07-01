@@ -13,6 +13,7 @@ type Webhook struct {
 	Secret    string // HMAC key used to verify events
 	Source    string // "github", "auth0", etc
 	CreatedAt time.Time
+	Events    []string `json:"events"`
 }
 
 type NotificationChannel struct {

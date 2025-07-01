@@ -17,6 +17,7 @@ CREATE TABLE webhooks
     name       TEXT NOT NULL,
     secret     TEXT NOT NULL,
     source     TEXT NOT NULL, -- e.g., 'github'
+    events     JSONB NOT NULL DEFAULT '[]',
     created_at TIMESTAMPTZ      DEFAULT now()
 );
 
@@ -55,3 +56,5 @@ CREATE TABLE alerts
     data       JSONB NOT NULL,
     created_at TIMESTAMPTZ      DEFAULT now()
 );
+
+insert into tenants (id, name) VALUES ('00000000-0000-0000-0000-000000000000', 'root');

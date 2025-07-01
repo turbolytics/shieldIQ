@@ -48,10 +48,11 @@ type Tenant struct {
 }
 
 type Webhook struct {
-	ID        uuid.UUID    `json:"id"`
-	TenantID  uuid.UUID    `json:"tenant_id"`
-	Name      string       `json:"name"`
-	Secret    string       `json:"secret"`
-	Source    string       `json:"source"`
-	CreatedAt sql.NullTime `json:"created_at"`
+	ID        uuid.UUID       `json:"id"`
+	TenantID  uuid.UUID       `json:"tenant_id"`
+	Name      string          `json:"name"`
+	Secret    string          `json:"secret"`
+	Source    string          `json:"source"`
+	Events    json.RawMessage `json:"events"`
+	CreatedAt sql.NullTime    `json:"created_at"`
 }

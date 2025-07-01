@@ -2,6 +2,7 @@ package serve
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -14,6 +15,8 @@ import (
 )
 
 func NewCommand() *cobra.Command {
+	var port string
+
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Start the SQLSec API server",
@@ -37,13 +40,19 @@ func NewCommand() *cobra.Command {
 
 			queries := db.New(dbConn)
 			wh := handlers.NewWebhook(queries, logger)
-			r := server.New(wh)
+			r := server.New(wh, logger)
 
-			logger.Info("Starting server on :8080")
-			if err := http.ListenAndServe(":8080", r); err != nil {
+			r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprintf(w, "Hello, you've reached the server running on port %q!", port)
+			})
+
+			addr := ":" + port
+			logger.Info("Starting server", zap.String("addr", addr))
+			if err := http.ListenAndServe(addr, r); err != nil {
 				logger.Fatal("server failed", zap.Error(err))
 			}
 		},
 	}
+	cmd.Flags().StringVarP(&port, "port", "p", "8080", "Port to listen on")
 	return cmd
 }
