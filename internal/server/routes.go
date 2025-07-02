@@ -1,15 +1,15 @@
 package server
 
 import (
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/turbolytics/sqlsec/internal/server/handlers"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
 
-func RegisterRoutes(router *chi.Mux, wh *handlers.Webhook, logger *zap.Logger) {
+func RegisterRoutes(wr *chi.Mux, wh *handlers.Webhook, logger *zap.Logger) {
 	logMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -31,17 +31,17 @@ func RegisterRoutes(router *chi.Mux, wh *handlers.Webhook, logger *zap.Logger) {
 		})
 	}
 
-	router.Use(logMiddleware)
+	wr.Use(logMiddleware)
 
-	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+	wr.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Server is healthy!"))
 	})
 
 	// Register routes
-	router.Route("/api", func(r chi.Router) {
-		r.Route("/webhooks", func(r chi.Router) {
-			r.Post("/create", wh.Create)
-			r.Get("/{webhook_id}", wh.Get)
+	wr.Route("/api", func(wr chi.Router) {
+		wr.Route("/webhooks", func(wr chi.Router) {
+			wr.Get("/{id}", wh.Get)
+			wr.Post("/create", wh.Create)
 		})
 	})
 }

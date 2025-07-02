@@ -88,17 +88,10 @@ func (wh *Webhook) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (wh *Webhook) Get(w http.ResponseWriter, r *http.Request) {
-	ctx := chi.RouteContext(r.Context())
-	fmt.Println("URL Path:", r.URL.Path)
-	fmt.Println(ctx)
-	wh.logger.Info(
-		"Get webhook called",
-		zap.String("webhook_id", chi.URLParam(r, "webhook_id")),
-		zap.Any("request", r),
-	)
-	idStr := chi.URLParam(r, "webhook_id")
-	id, err := uuid.Parse(idStr)
-	fmt.Println("here", idStr, "test")
+	webhookID := chi.URLParam(r, "id")
+	wh.logger.Info("Get webhook called", zap.String("id", webhookID))
+	fmt.Println("Get webhook called with ID:", webhookID)
+	id, err := uuid.Parse(webhookID)
 	if err != nil {
 		http.Error(w, "invalid webhook id", http.StatusBadRequest)
 		return
@@ -110,7 +103,6 @@ func (wh *Webhook) Get(w http.ResponseWriter, r *http.Request) {
 		ID:       id,
 		TenantID: tid,
 	})
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "webhook not found", http.StatusNotFound)
@@ -129,6 +121,7 @@ func (wh *Webhook) Get(w http.ResponseWriter, r *http.Request) {
 		Secret:    webhook.Secret,
 		Source:    webhook.Source,
 		CreatedAt: webhook.CreatedAt.Time,
+		Events:    mustUnmarshalEvents(webhook.Events),
 	})
 }
 
