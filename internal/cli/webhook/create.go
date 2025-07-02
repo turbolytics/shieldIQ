@@ -14,8 +14,7 @@ func NewWebhookCreateCmd() *cobra.Command {
 		Use:   "create",
 		Short: "Create a new webhook source",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("here!")
-			return nil
+			return fmt.Errorf("webhook creation is not yet implemented")
 		},
 	}
 
