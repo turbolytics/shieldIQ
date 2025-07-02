@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/turbolytics/sqlsec/internal/auth"
+	"github.com/turbolytics/sqlsec/internal/sources"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
@@ -40,6 +41,11 @@ func (wh *Webhook) Create(w http.ResponseWriter, r *http.Request) {
 	var req CreateWebhookRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if !sources.DefaultRegistry.IsEnabled(req.Source) {
+		http.Error(w, "unsupported source", http.StatusBadRequest)
 		return
 	}
 
