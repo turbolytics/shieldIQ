@@ -90,7 +90,7 @@ func (wh *Webhook) Create(w http.ResponseWriter, r *http.Request) {
 func (wh *Webhook) Get(w http.ResponseWriter, r *http.Request) {
 	webhookID := chi.URLParam(r, "id")
 	wh.logger.Info("Get webhook called", zap.String("id", webhookID))
-	fmt.Println("Get webhook called with ID:", webhookID)
+	wh.logger.Debug("Get webhook called with ID", zap.String("webhookID", webhookID))
 	id, err := uuid.Parse(webhookID)
 	if err != nil {
 		http.Error(w, "invalid webhook id", http.StatusBadRequest)
