@@ -22,9 +22,7 @@ type CreateWebhookRequest struct {
 	Events []string `json:"events"`
 }
 
-type Server struct {
-	queries *db.Queries
-}
+// Removed unused Server type declaration.
 
 // NewWebhook creates a new Webhook handler with the given options.
 func NewWebhook(queries *db.Queries, logger *zap.Logger) *Webhook {
