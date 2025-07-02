@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/turbolytics/sqlsec/internal/auth"
 	"go.uber.org/zap"
 	"net/http"
