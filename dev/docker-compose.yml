@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: sqlsec_postgres
+    environment:
+      POSTGRES_USER: sqlsec
+      POSTGRES_PASSWORD: sqlsec
+      POSTGRES_DB: sqlsec
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "sqlsec"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
