@@ -7,13 +7,13 @@ import (
 )
 
 type Webhook struct {
-	ID        uuid.UUID
-	TenantID  uuid.UUID
-	Name      string
-	Secret    string // HMAC key used to verify events
-	Source    string // "github", "auth0", etc
-	CreatedAt time.Time
-	Events    []string `json:"events"`
+	ID        uuid.UUID `json:"id"`
+	TenantID  uuid.UUID `json:"tenant_id"`
+	Name      string    `json:"name"`
+	Secret    string    `json:"secret"` // HMAC key used to verify events
+	Source    string    `json:"source"` // "github", "auth0", etc
+	CreatedAt time.Time `json:"created_at"`
+	Events    []string  `json:"events"`
 }
 
 type NotificationChannel struct {

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/turbolytics/sqlsec/internal/auth"
 	"go.uber.org/zap"
 	"net/http"
@@ -81,14 +82,23 @@ func (wh *Webhook) Create(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: hook.CreatedAt.Time,
 		Events:    mustUnmarshalEvents(hook.Events),
 	}
-	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(resp)
 }
 
 func (wh *Webhook) Get(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
+	ctx := chi.RouteContext(r.Context())
+	fmt.Println("URL Path:", r.URL.Path)
+	fmt.Println(ctx)
+	wh.logger.Info(
+		"Get webhook called",
+		zap.String("webhook_id", chi.URLParam(r, "webhook_id")),
+		zap.Any("request", r),
+	)
+	idStr := chi.URLParam(r, "webhook_id")
 	id, err := uuid.Parse(idStr)
+	fmt.Println("here", idStr, "test")
 	if err != nil {
 		http.Error(w, "invalid webhook id", http.StatusBadRequest)
 		return
@@ -100,6 +110,7 @@ func (wh *Webhook) Get(w http.ResponseWriter, r *http.Request) {
 		ID:       id,
 		TenantID: tid,
 	})
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "webhook not found", http.StatusNotFound)

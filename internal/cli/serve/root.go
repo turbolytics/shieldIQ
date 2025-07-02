@@ -2,7 +2,7 @@ package serve
 
 import (
 	"database/sql"
-	"fmt"
+	"github.com/go-chi/chi"
 	"log"
 	"net/http"
 	"os"
@@ -40,11 +40,12 @@ func NewCommand() *cobra.Command {
 
 			queries := db.New(dbConn)
 			wh := handlers.NewWebhook(queries, logger)
-			r := server.New(wh, logger)
-
-			r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintf(w, "Hello, you've reached the server running on port %q!", port)
-			})
+			r := chi.NewRouter()
+			server.RegisterRoutes(
+				r,
+				wh,
+				logger,
+			)
 
 			addr := ":" + port
 			logger.Info("Starting server", zap.String("addr", addr))

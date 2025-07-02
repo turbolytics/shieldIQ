@@ -9,9 +9,7 @@ import (
 	"time"
 )
 
-func New(wh *handlers.Webhook, logger *zap.Logger) *chi.Mux {
-	r := chi.NewRouter()
-
+func RegisterRoutes(router *chi.Mux, wh *handlers.Webhook, logger *zap.Logger) {
 	logMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -33,13 +31,17 @@ func New(wh *handlers.Webhook, logger *zap.Logger) *chi.Mux {
 		})
 	}
 
-	r.Use(logMiddleware)
+	router.Use(logMiddleware)
 
-	// Register routes
-	r.Route("/api", func(r chi.Router) {
-		r.Post("/webhooks", wh.Create)
-		r.Get("/webhooks/{id}", wh.Get)
+	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Server is healthy!"))
 	})
 
-	return r
+	// Register routes
+	router.Route("/api", func(r chi.Router) {
+		r.Route("/webhooks", func(r chi.Router) {
+			r.Post("/create", wh.Create)
+			r.Get("/{webhook_id}", wh.Get)
+		})
+	})
 }
