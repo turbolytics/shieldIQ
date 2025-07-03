@@ -1,9 +1,9 @@
-package sources
+package source
 
 import (
 	"net/http"
 
-	"github.com/turbolytics/sqlsec/internal/sources/github"
+	"github.com/turbolytics/sqlsec/internal/source/github"
 )
 
 type Validator interface {

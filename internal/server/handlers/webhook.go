@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/turbolytics/sqlsec/internal/auth"
-	"github.com/turbolytics/sqlsec/internal/sources"
+	"github.com/turbolytics/sqlsec/internal/source"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
@@ -44,7 +44,7 @@ func (wh *Webhook) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !sources.DefaultRegistry.IsEnabled(req.Source) {
+	if !source.DefaultRegistry.IsEnabled(req.Source) {
 		http.Error(w, "unsupported source", http.StatusBadRequest)
 		return
 	}
@@ -151,7 +151,7 @@ func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validator := sources.DefaultRegistry.GetValidator(webhook.Source)
+	validator := source.DefaultRegistry.GetValidator(webhook.Source)
 	if validator == nil {
 		http.Error(w, "unsupported source", http.StatusBadRequest)
 		return
@@ -162,7 +162,7 @@ func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	parser := sources.DefaultRegistry.GetParser(webhook.Source)
+	parser := source.DefaultRegistry.GetParser(webhook.Source)
 	if parser == nil {
 		http.Error(w, "unsupported source", http.StatusBadRequest)
 		return

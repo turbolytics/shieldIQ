@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func RegisterRoutes(wr *chi.Mux, wh *handlers.Webhook, logger *zap.Logger) {
+func RegisterRoutes(wr *chi.Mux, wh *handlers.Webhook, nh *handlers.NotificationHandlers, logger *zap.Logger) {
 	logMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -44,6 +44,13 @@ func RegisterRoutes(wr *chi.Mux, wh *handlers.Webhook, logger *zap.Logger) {
 		})
 		wr.Route("/events", func(wr chi.Router) {
 			wr.Post("/{webhook_id}", wh.Event)
+		})
+
+		// Notification Channels
+		wr.Route("/notification-channels", func(wr chi.Router) {
+			wr.Post("/", nh.Create)
+			wr.Get("/", nh.List)
+			wr.Post("/{id}/test", nh.Test)
 		})
 	})
 }

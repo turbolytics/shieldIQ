@@ -12,33 +12,36 @@ import (
 )
 
 type Alert struct {
-	ID        uuid.UUID       `json:"id"`
-	TenantID  uuid.UUID       `json:"tenant_id"`
-	RuleID    uuid.UUID       `json:"rule_id"`
-	Message   string          `json:"message"`
-	Severity  string          `json:"severity"`
-	Data      json.RawMessage `json:"data"`
-	CreatedAt sql.NullTime    `json:"created_at"`
+	ID          uuid.UUID       `json:"id"`
+	TenantID    uuid.UUID       `json:"tenant_id"`
+	RuleID      uuid.NullUUID   `json:"rule_id"`
+	Event       json.RawMessage `json:"event"`
+	TriggeredAt sql.NullTime    `json:"triggered_at"`
+	Notified    sql.NullBool    `json:"notified"`
 }
 
 type NotificationChannel struct {
 	ID        uuid.UUID       `json:"id"`
 	TenantID  uuid.UUID       `json:"tenant_id"`
-	Name      string          `json:"name"`
 	Type      string          `json:"type"`
 	Config    json.RawMessage `json:"config"`
 	CreatedAt sql.NullTime    `json:"created_at"`
 }
 
 type Rule struct {
-	ID                    uuid.UUID    `json:"id"`
-	TenantID              uuid.UUID    `json:"tenant_id"`
-	Name                  string       `json:"name"`
-	Sql                   string       `json:"sql"`
-	Severity              string       `json:"severity"`
-	NotificationChannelID uuid.UUID    `json:"notification_channel_id"`
-	Enabled               sql.NullBool `json:"enabled"`
-	CreatedAt             sql.NullTime `json:"created_at"`
+	ID          uuid.UUID      `json:"id"`
+	TenantID    uuid.UUID      `json:"tenant_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	Source      string         `json:"source"`
+	Sql         string         `json:"sql"`
+	EvalType    string         `json:"eval_type"`
+	CreatedAt   sql.NullTime   `json:"created_at"`
+}
+
+type RuleNotification struct {
+	RuleID    uuid.UUID `json:"rule_id"`
+	ChannelID uuid.UUID `json:"channel_id"`
 }
 
 type Tenant struct {
