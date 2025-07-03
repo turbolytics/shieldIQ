@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/turbolytics/sqlsec/internal"
 	"github.com/turbolytics/sqlsec/internal/db"
@@ -90,6 +91,33 @@ func (h *NotificationHandlers) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *NotificationHandlers) Test(w http.ResponseWriter, r *http.Request) {
-	// TODO: parse id from URL, get channel, send test notification
-	http.Error(w, "not implemented", http.StatusNotImplemented)
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	ch, err := h.queries.GetNotificationChannelByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "notification channel not found", http.StatusNotFound)
+		return
+	}
+	// Parse config JSON to map[string]string
+	var cfg map[string]string
+	if err := json.Unmarshal(ch.Config, &cfg); err != nil {
+		http.Error(w, "invalid config", http.StatusBadRequest)
+		return
+	}
+	n, err := notify.DefaultRegistry.Get(notify.ChannelType(ch.Type))
+	if err != nil {
+		http.Error(w, "unsupported notification channel type", http.StatusBadRequest)
+		return
+	}
+	err = n.Test(r.Context(), cfg)
+	if err != nil {
+		http.Error(w, "failed to send test notification: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Test message sent"))
 }
