@@ -13,48 +13,55 @@ CREATE TABLE tenants
 CREATE TABLE webhooks
 (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id  UUID NOT NULL REFERENCES tenants (id),
-    name       TEXT NOT NULL,
-    secret     TEXT NOT NULL,
-    source     TEXT NOT NULL, -- e.g., 'github'
-    events     JSONB NOT NULL DEFAULT '[]',
-    created_at TIMESTAMPTZ      DEFAULT now()
-);
-
--- Notification Channels (e.g., Slack)
-CREATE TABLE notification_channels
-(
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id  UUID  NOT NULL REFERENCES tenants (id),
     name       TEXT  NOT NULL,
-    type       TEXT  NOT NULL, -- 'slack', 'webhook'
-    config     JSONB NOT NULL,
+    secret     TEXT  NOT NULL,
+    source     TEXT  NOT NULL, -- e.g., 'github'
+    events     JSONB NOT NULL   DEFAULT '[]',
     created_at TIMESTAMPTZ      DEFAULT now()
 );
 
--- Rules
+insert into tenants (id, name)
+VALUES ('00000000-0000-0000-0000-000000000000', 'root');
+
+-- Rules: User-defined SQL checks on live events
 CREATE TABLE rules
 (
-    id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id               UUID NOT NULL REFERENCES tenants (id),
-    name                    TEXT NOT NULL,
-    sql                     TEXT NOT NULL,
-    severity                TEXT NOT NULL,
-    notification_channel_id UUID NOT NULL REFERENCES notification_channels (id),
-    enabled                 BOOLEAN          DEFAULT true,
-    created_at              TIMESTAMPTZ      DEFAULT now()
+    id          UUID PRIMARY KEY,
+    tenant_id   UUID NOT NULL,
+    name        TEXT NOT NULL,
+    description TEXT,
+    source      TEXT NOT NULL,                        -- e.g. 'github', 'stripe'
+    sql         TEXT NOT NULL,                        -- SELECT * FROM events WHERE ...
+    eval_type   TEXT NOT NULL DEFAULT 'LIVE_TRIGGER', -- only allowed: 'LIVE_TRIGGER'
+    created_at  TIMESTAMP     DEFAULT now()
 );
 
--- Alerts
+-- Notification Channels: Slack, Webhook, Email, etc.
+CREATE TABLE notification_channels
+(
+    id         UUID PRIMARY KEY,
+    tenant_id  UUID  NOT NULL,
+    type       TEXT  NOT NULL, -- 'slack', 'webhook', 'email'
+    config     JSONB NOT NULL, -- token, URL, etc.
+    created_at TIMESTAMP DEFAULT now()
+);
+
+-- Rule <-> NotificationChannel mapping
+CREATE TABLE rule_notifications
+(
+    rule_id    UUID REFERENCES rules (id) ON DELETE CASCADE,
+    channel_id UUID REFERENCES notification_channels (id) ON DELETE CASCADE,
+    PRIMARY KEY (rule_id, channel_id)
+);
+
+-- Alerts: when a rule is triggered on a specific event
 CREATE TABLE alerts
 (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id  UUID  NOT NULL REFERENCES tenants (id),
-    rule_id    UUID  NOT NULL REFERENCES rules (id),
-    message    TEXT  NOT NULL,
-    severity   TEXT  NOT NULL,
-    data       JSONB NOT NULL,
-    created_at TIMESTAMPTZ      DEFAULT now()
+    id           UUID PRIMARY KEY,
+    tenant_id    UUID  NOT NULL,
+    rule_id      UUID REFERENCES rules (id),
+    event        JSONB NOT NULL,
+    triggered_at TIMESTAMP DEFAULT now(),
+    notified     BOOLEAN   DEFAULT FALSE
 );
-
-insert into tenants (id, name) VALUES ('00000000-0000-0000-0000-000000000000', 'root');

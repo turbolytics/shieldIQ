@@ -6,11 +6,16 @@ package db
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
+	CreateNotificationChannel(ctx context.Context, arg CreateNotificationChannelParams) (NotificationChannel, error)
 	CreateWebhook(ctx context.Context, arg CreateWebhookParams) (Webhook, error)
+	GetNotificationChannelByID(ctx context.Context, id uuid.UUID) (NotificationChannel, error)
 	GetWebhook(ctx context.Context, arg GetWebhookParams) (Webhook, error)
+	ListNotificationChannels(ctx context.Context, tenantID uuid.UUID) ([]NotificationChannel, error)
 }
 
 var _ Querier = (*Queries)(nil)

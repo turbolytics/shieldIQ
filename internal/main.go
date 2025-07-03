@@ -17,12 +17,12 @@ type Webhook struct {
 }
 
 type NotificationChannel struct {
-	ID        uuid.UUID
-	TenantID  uuid.UUID
-	Name      string
-	Type      string          // "slack", "webhook"
-	Config    json.RawMessage // contains token/webhook/channel, etc
-	CreatedAt time.Time
+	ID        uuid.UUID       `json:"id"`
+	TenantID  uuid.UUID       `json:"tenant_id"`
+	Name      string          `json:"name"`
+	Type      string          `json:"type"`   // "slack", "webhook"
+	Config    json.RawMessage `json:"config"` // contains token/webhook/channel, etc
+	CreatedAt time.Time       `json:"created_at"`
 }
 
 type Rule struct {
