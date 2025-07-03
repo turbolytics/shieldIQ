@@ -128,6 +128,63 @@ func (wh *Webhook) Get(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
+	webhookID := chi.URLParam(r, "webhook_id")
+	id, err := uuid.Parse(webhookID)
+	if err != nil {
+		http.Error(w, "invalid webhook id", http.StatusBadRequest)
+		return
+	}
+	// Hardcoded tenant_id for now
+	tid := uuid.MustParse("00000000-0000-0000-0000-000000000000")
+	webhook, err := wh.queries.GetWebhook(r.Context(), db.GetWebhookParams{
+		ID:       id,
+		TenantID: tid,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, "webhook not found", http.StatusNotFound)
+			return
+		}
+		wh.logger.Error("failed to get webhook", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	validator := sources.DefaultRegistry.GetValidator(webhook.Source)
+	if validator == nil {
+		http.Error(w, "unsupported source", http.StatusBadRequest)
+		return
+	}
+	if err := validator.Validate(r, webhook.Secret); err != nil {
+		wh.logger.Warn("validation failed", zap.Error(err))
+		http.Error(w, "invalid signature", http.StatusUnauthorized)
+		return
+	}
+
+	parser := sources.DefaultRegistry.GetParser(webhook.Source)
+	if parser == nil {
+		http.Error(w, "unsupported source", http.StatusBadRequest)
+		return
+	}
+	payload, err := parser.Parse(r)
+	if err != nil {
+		wh.logger.Warn("failed to parse payload", zap.Error(err))
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+	event := struct {
+		Time    time.Time
+		Payload map[string]any
+	}{
+		Time:    time.Now().UTC(),
+		Payload: payload,
+	}
+	wh.logger.Info("event received", zap.Any("event", event))
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("event received"))
+}
+
 func mustMarshalEvents(events []string) []byte {
 	data, err := json.Marshal(events)
 	if err != nil {
