@@ -37,11 +37,13 @@ func RegisterRoutes(wr *chi.Mux, wh *handlers.Webhook, logger *zap.Logger) {
 		w.Write([]byte("Server is healthy!"))
 	})
 
-	// Register routes
 	wr.Route("/api", func(wr chi.Router) {
 		wr.Route("/webhooks", func(wr chi.Router) {
 			wr.Get("/{id}", wh.Get)
 			wr.Post("/create", wh.Create)
+		})
+		wr.Route("/events", func(wr chi.Router) {
+			wr.Post("/{webhook_id}", wh.Event)
 		})
 	})
 }
