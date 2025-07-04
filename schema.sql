@@ -28,14 +28,20 @@ VALUES ('00000000-0000-0000-0000-000000000000', 'root');
 CREATE TABLE rules
 (
     id          UUID PRIMARY KEY,
-    tenant_id   UUID NOT NULL,
-    name        TEXT NOT NULL,
+    tenant_id   UUID        NOT NULL,
+    name        TEXT        NOT NULL,
     description TEXT,
-    source      TEXT NOT NULL,                        -- e.g. 'github', 'stripe'
-    sql         TEXT NOT NULL,                        -- SELECT * FROM events WHERE ...
-    eval_type   TEXT NOT NULL DEFAULT 'LIVE_TRIGGER', -- only allowed: 'LIVE_TRIGGER'
-    created_at  TIMESTAMP     DEFAULT now()
+    source      TEXT        NOT NULL, -- e.g. 'github'
+    event_type  TEXT        NOT NULL, -- e.g. 'pull_request'
+    sql         TEXT        NOT NULL, -- just the WHERE clause
+    eval_type   TEXT        NOT NULL DEFAULT 'LIVE_TRIGGER'
+        CHECK (eval_type IN ('LIVE_TRIGGER')),
+    alert_level TEXT        NOT NULL DEFAULT 'MEDIUM'
+        CHECK (alert_level IN ('LOW', 'MEDIUM', 'HIGH')),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX rules_tenant_idx ON rules (tenant_id);
 
 -- Notification Channels: Slack, Webhook, Email, etc.
 CREATE TABLE notification_channels

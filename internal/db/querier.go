@@ -12,10 +12,14 @@ import (
 
 type Querier interface {
 	CreateNotificationChannel(ctx context.Context, arg CreateNotificationChannelParams) (NotificationChannel, error)
+	CreateRule(ctx context.Context, arg CreateRuleParams) (Rule, error)
 	CreateWebhook(ctx context.Context, arg CreateWebhookParams) (Webhook, error)
+	DeleteRule(ctx context.Context, arg DeleteRuleParams) error
 	GetNotificationChannelByID(ctx context.Context, id uuid.UUID) (NotificationChannel, error)
+	GetRuleByID(ctx context.Context, arg GetRuleByIDParams) (Rule, error)
 	GetWebhook(ctx context.Context, arg GetWebhookParams) (Webhook, error)
 	ListNotificationChannels(ctx context.Context, tenantID uuid.UUID) ([]NotificationChannel, error)
+	ListRules(ctx context.Context, arg ListRulesParams) ([]Rule, error)
 }
 
 var _ Querier = (*Queries)(nil)

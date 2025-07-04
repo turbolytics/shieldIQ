@@ -25,23 +25,29 @@ type NotificationChannel struct {
 	CreatedAt time.Time       `json:"created_at"`
 }
 
-type Rule struct {
-	ID                    uuid.UUID
-	TenantID              uuid.UUID
-	Name                  string
-	SQL                   string
-	Severity              string // "low", "medium", "high"
-	NotificationChannelID uuid.UUID
-	Enabled               bool
-	CreatedAt             time.Time
-}
+type EvaluationType string
 
-type Alert struct {
-	ID        uuid.UUID
-	RuleID    uuid.UUID
-	TenantID  uuid.UUID
-	Message   string
-	Severity  string
-	Data      json.RawMessage
-	CreatedAt time.Time
+const (
+	EvaluationTypeLiveTrigger EvaluationType = "LIVE_TRIGGER"
+)
+
+type AlertLevel string
+
+const (
+	AlertLevelLow    AlertLevel = "LOW"
+	AlertLevelMedium AlertLevel = "MEDIUM"
+	AlertLevelHigh   AlertLevel = "HIGH"
+)
+
+type Rule struct {
+	ID             string         `json:"id"`
+	Name           string         `json:"name"`
+	Description    string         `json:"description"`
+	EvaluationType EvaluationType `json:"evaluation_type"` // Only LIVE_TRIGGER for now
+	EventSource    string         `json:"event_source"`    // e.g. "github", "auth0"
+	EventType      string         `json:"event_type"`      // e.g. "github.pull_request"
+	SQL            string         `json:"sql"`             // SQL expression, e.g. "reviewed = false"
+	// NotificationChannels []string       `json:"notification_ids"` // Channels to alert
+	CreatedAt  time.Time  `json:"created_at"`
+	AlertLevel AlertLevel `json:"alert_level"`
 }

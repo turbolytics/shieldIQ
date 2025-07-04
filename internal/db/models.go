@@ -7,6 +7,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -34,9 +35,11 @@ type Rule struct {
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
 	Source      string         `json:"source"`
+	EventType   string         `json:"event_type"`
 	Sql         string         `json:"sql"`
 	EvalType    string         `json:"eval_type"`
-	CreatedAt   sql.NullTime   `json:"created_at"`
+	AlertLevel  string         `json:"alert_level"`
+	CreatedAt   time.Time      `json:"created_at"`
 }
 
 type RuleNotification struct {
