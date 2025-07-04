@@ -153,6 +153,7 @@ func (h *RuleHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RuleHandlers) Test(w http.ResponseWriter, r *http.Request) {
+	panic("not implemented") // TODO: Implement this
 	idStr := chi.URLParam(r, "id")
 	_, err := uuid.Parse(idStr)
 	if err != nil {
