@@ -48,13 +48,16 @@ CREATE TABLE notification_channels
 (
     id         UUID PRIMARY KEY,
     tenant_id  UUID  NOT NULL,
+    name       TEXT  NOT NULL, -- Human-readable name for identification
     type       TEXT  NOT NULL, -- 'slack', 'webhook', 'email'
     config     JSONB NOT NULL, -- token, URL, etc.
     created_at TIMESTAMP DEFAULT now()
 );
 
+CREATE UNIQUE INDEX notification_channels_tenant_name_idx ON notification_channels (tenant_id, name);
+
 -- Rule <-> NotificationChannel mapping
-CREATE TABLE rule_notifications
+CREATE TABLE rule_destinations
 (
     rule_id    UUID REFERENCES rules (id) ON DELETE CASCADE,
     channel_id UUID REFERENCES notification_channels (id) ON DELETE CASCADE,
