@@ -13,3 +13,8 @@ ORDER BY created_at DESC;
 SELECT id, tenant_id, name, type, config, created_at
 FROM notification_channels
 WHERE id = $1;
+
+-- name: GetNotificationChannelByTenantAndName :one
+SELECT id, tenant_id, name, type, config, created_at
+FROM notification_channels
+WHERE tenant_id = $1 AND name = $2;

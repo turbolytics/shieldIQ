@@ -68,7 +68,6 @@ func RegisterRoutes(wr *chi.Mux, wh *handlers.Webhook, nh *handlers.Notification
 			wr.Get("/", dh.List)
 		})
 		wr.Route("/rules/{id}/destinations/{dest_id}", func(wr chi.Router) {
-			wr.Get("/", dh.Get)
 			wr.Delete("/", dh.Delete)
 			wr.Post("/test", dh.Test)
 		})

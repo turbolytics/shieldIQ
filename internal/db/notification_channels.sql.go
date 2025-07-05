@@ -66,6 +66,31 @@ func (q *Queries) GetNotificationChannelByID(ctx context.Context, id uuid.UUID) 
 	return i, err
 }
 
+const getNotificationChannelByTenantAndName = `-- name: GetNotificationChannelByTenantAndName :one
+SELECT id, tenant_id, name, type, config, created_at
+FROM notification_channels
+WHERE tenant_id = $1 AND name = $2
+`
+
+type GetNotificationChannelByTenantAndNameParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	Name     string    `json:"name"`
+}
+
+func (q *Queries) GetNotificationChannelByTenantAndName(ctx context.Context, arg GetNotificationChannelByTenantAndNameParams) (NotificationChannel, error) {
+	row := q.db.QueryRowContext(ctx, getNotificationChannelByTenantAndName, arg.TenantID, arg.Name)
+	var i NotificationChannel
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Name,
+		&i.Type,
+		&i.Config,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listNotificationChannels = `-- name: ListNotificationChannels :many
 SELECT id, tenant_id, name, type, config, created_at
 FROM notification_channels

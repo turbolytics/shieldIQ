@@ -54,6 +54,8 @@ CREATE TABLE notification_channels
     created_at TIMESTAMP DEFAULT now()
 );
 
+CREATE UNIQUE INDEX notification_channels_tenant_name_idx ON notification_channels (tenant_id, name);
+
 -- Rule <-> NotificationChannel mapping
 CREATE TABLE rule_destinations
 (
