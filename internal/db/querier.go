@@ -21,6 +21,7 @@ type Querier interface {
 	GetNotificationChannelByTenantAndName(ctx context.Context, arg GetNotificationChannelByTenantAndNameParams) (NotificationChannel, error)
 	GetRuleByID(ctx context.Context, arg GetRuleByIDParams) (Rule, error)
 	GetWebhook(ctx context.Context, arg GetWebhookParams) (Webhook, error)
+	InsertEvent(ctx context.Context, arg InsertEventParams) (Event, error)
 	ListNotificationChannels(ctx context.Context, tenantID uuid.UUID) ([]NotificationChannel, error)
 	ListNotificationChannelsForRule(ctx context.Context, ruleID uuid.UUID) ([]NotificationChannel, error)
 	ListRuleDestinationChannelIDs(ctx context.Context, ruleID uuid.UUID) ([]uuid.UUID, error)

@@ -74,3 +74,25 @@ CREATE TABLE alerts
     triggered_at TIMESTAMP DEFAULT now(),
     notified     BOOLEAN   DEFAULT FALSE
 );
+
+-- Ingested Events (raw and parsed)
+CREATE TABLE events
+(
+    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id    UUID  NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
+    webhook_id   UUID  NOT NULL REFERENCES webhooks (id) ON DELETE CASCADE,
+
+    -- Metadata for routing/evaluation
+    source       TEXT  NOT NULL, -- e.g. 'github'
+    event_type   TEXT  NOT NULL, -- e.g. 'pull_request'
+    action       TEXT,           -- e.g. 'opened', 'closed' (nullable for flexibility)
+
+    -- Actual event payload
+    raw_payload  JSONB NOT NULL,
+
+    -- Optional: deduplication or trace
+    dedup_hash   TEXT UNIQUE,    -- SHA256 hash of raw_payload, optional
+    received_at  TIMESTAMPTZ      DEFAULT now()
+);
+
+-- Indexes for fast rule lookup

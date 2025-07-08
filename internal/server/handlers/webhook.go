@@ -173,6 +173,33 @@ func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
+	// Insert event into DB after validation and parsing
+	eventType, err := parser.Type(r)
+	if err != nil {
+		wh.logger.Warn("failed to get event type", zap.Error(err))
+		http.Error(w, "invalid event type", http.StatusBadRequest)
+		return
+	}
+	rawPayload, err := json.Marshal(payload)
+	if err != nil {
+		wh.logger.Error("failed to marshal payload", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	_, err = wh.queries.InsertEvent(r.Context(), db.InsertEventParams{
+		TenantID:   webhook.TenantID,
+		WebhookID:  webhook.ID,
+		Source:     webhook.Source,
+		EventType:  eventType,
+		Action:     sql.NullString{}, // Set this if you can extract from payload
+		RawPayload: rawPayload,
+		DedupHash:  sql.NullString{}, // Set this if you want to deduplicate
+	})
+	if err != nil {
+		wh.logger.Error("failed to insert event", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 	event := struct {
 		Time    time.Time
 		Payload map[string]any

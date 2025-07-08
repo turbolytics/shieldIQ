@@ -22,3 +22,11 @@ func (p *GithubParser) Parse(r *http.Request) (map[string]any, error) {
 	}
 	return payload, nil
 }
+
+func (p *GithubParser) Type(r *http.Request) (string, error) {
+	eventType := r.Header.Get("X-GitHub-Event")
+	if eventType == "" {
+		return "", io.EOF
+	}
+	return eventType, nil
+}

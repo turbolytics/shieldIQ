@@ -21,6 +21,18 @@ type Alert struct {
 	Notified    sql.NullBool    `json:"notified"`
 }
 
+type Event struct {
+	ID         uuid.UUID       `json:"id"`
+	TenantID   uuid.UUID       `json:"tenant_id"`
+	WebhookID  uuid.UUID       `json:"webhook_id"`
+	Source     string          `json:"source"`
+	EventType  string          `json:"event_type"`
+	Action     sql.NullString  `json:"action"`
+	RawPayload json.RawMessage `json:"raw_payload"`
+	DedupHash  sql.NullString  `json:"dedup_hash"`
+	ReceivedAt sql.NullTime    `json:"received_at"`
+}
+
 type NotificationChannel struct {
 	ID        uuid.UUID       `json:"id"`
 	TenantID  uuid.UUID       `json:"tenant_id"`
