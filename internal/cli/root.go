@@ -3,6 +3,7 @@ package cli
 import (
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
+	"github.com/turbolytics/sqlsec/internal/cli/engine"
 	"github.com/turbolytics/sqlsec/internal/cli/serve"
 	"github.com/turbolytics/sqlsec/internal/cli/webhook"
 	"log"
@@ -32,6 +33,7 @@ func NewRootCommand() *cobra.Command {
 	// Register subcommands
 	rootCmd.AddCommand(webhook.NewCommand())
 	rootCmd.AddCommand(serve.NewCommand())
+	rootCmd.AddCommand(engine.NewCmd())
 
 	return rootCmd
 }
