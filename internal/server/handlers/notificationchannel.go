@@ -46,6 +46,7 @@ func (h *NotificationHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	ch, err := h.queries.CreateNotificationChannel(r.Context(), db.CreateNotificationChannelParams{
 		ID:       id,
 		TenantID: tenantID,
+		Name:     req.Name,
 		Type:     req.Type,
 		Config:   configJSON,
 	})
@@ -56,7 +57,7 @@ func (h *NotificationHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	resp := internal.NotificationChannel{
 		ID:        ch.ID,
 		TenantID:  ch.TenantID,
-		Name:      req.Name, // Name is not in DB yet, so use request value
+		Name:      ch.Name,
 		Type:      ch.Type,
 		Config:    ch.Config,
 		CreatedAt: ch.CreatedAt.Time, // ch.CreatedAt is sql.NullTime

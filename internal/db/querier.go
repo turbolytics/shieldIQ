@@ -6,6 +6,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -17,15 +18,19 @@ type Querier interface {
 	CreateWebhook(ctx context.Context, arg CreateWebhookParams) (Webhook, error)
 	DeleteRule(ctx context.Context, arg DeleteRuleParams) error
 	DeleteRuleDestination(ctx context.Context, arg DeleteRuleDestinationParams) error
+	FetchNextEventForProcessing(ctx context.Context, lockedBy sql.NullString) (uuid.UUID, error)
 	GetNotificationChannelByID(ctx context.Context, id uuid.UUID) (NotificationChannel, error)
 	GetNotificationChannelByTenantAndName(ctx context.Context, arg GetNotificationChannelByTenantAndNameParams) (NotificationChannel, error)
 	GetRuleByID(ctx context.Context, arg GetRuleByIDParams) (Rule, error)
 	GetWebhook(ctx context.Context, arg GetWebhookParams) (Webhook, error)
 	InsertEvent(ctx context.Context, arg InsertEventParams) (Event, error)
+	InsertEventProcessingQueue(ctx context.Context, eventID uuid.UUID) (EventProcessingQueue, error)
 	ListNotificationChannels(ctx context.Context, tenantID uuid.UUID) ([]NotificationChannel, error)
 	ListNotificationChannelsForRule(ctx context.Context, ruleID uuid.UUID) ([]NotificationChannel, error)
 	ListRuleDestinationChannelIDs(ctx context.Context, ruleID uuid.UUID) ([]uuid.UUID, error)
 	ListRules(ctx context.Context, arg ListRulesParams) ([]Rule, error)
+	MarkEventProcessingDone(ctx context.Context, eventID uuid.UUID) error
+	MarkEventProcessingFailed(ctx context.Context, arg MarkEventProcessingFailedParams) error
 }
 
 var _ Querier = (*Queries)(nil)

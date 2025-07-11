@@ -38,7 +38,7 @@ func NewCommand() *cobra.Command {
 			defer dbConn.Close()
 
 			queries := db.New(dbConn)
-			wh := handlers.NewWebhook(queries, logger)
+			wh := handlers.NewWebhook(dbConn, queries, logger)
 			nh := handlers.NewNotificationHandlers(queries)
 			rh := handlers.NewRuleHandlers(queries)
 			dh := handlers.NewDestinationHandlers(queries)

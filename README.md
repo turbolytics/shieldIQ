@@ -61,3 +61,11 @@ curl -X POST http://localhost:8888/api/notification-channels \
 ```
 docker exec -i sqlsec_postgres psql -U sqlsec -d sqlsec < schema.sql
 ```
+
+```
+SQLSEC_DB_DSN=postgres://sqlsec:sqlsec@localhost:5432/sqlsec?sslmode=disable go run cmd/sqlsec/main.go serve -p 8888
+```
+
+```
+docker exec -it sqlsec_postgres psql -U sqlsec
+```

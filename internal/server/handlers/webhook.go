@@ -25,8 +25,9 @@ type CreateWebhookRequest struct {
 // Removed unused Server type declaration.
 
 // NewWebhook creates a new Webhook handler with the given options.
-func NewWebhook(queries *db.Queries, logger *zap.Logger) *Webhook {
+func NewWebhook(dbConn *sql.DB, queries *db.Queries, logger *zap.Logger) *Webhook {
 	return &Webhook{
+		db:      dbConn,
 		queries: queries,
 		logger:  logger,
 	}
@@ -34,6 +35,7 @@ func NewWebhook(queries *db.Queries, logger *zap.Logger) *Webhook {
 
 type Webhook struct {
 	queries *db.Queries
+	db      *sql.DB
 	logger  *zap.Logger
 }
 
@@ -173,20 +175,30 @@ func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
-	// Insert event into DB after validation and parsing
+	// Insert event and queue in a transaction
+	tx, err := wh.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		wh.logger.Error("failed to begin transaction", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	q := wh.queries.WithTx(tx)
 	eventType, err := parser.Type(r)
 	if err != nil {
+		tx.Rollback()
 		wh.logger.Warn("failed to get event type", zap.Error(err))
 		http.Error(w, "invalid event type", http.StatusBadRequest)
 		return
 	}
 	rawPayload, err := json.Marshal(payload)
 	if err != nil {
+		tx.Rollback()
 		wh.logger.Error("failed to marshal payload", zap.Error(err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	_, err = wh.queries.InsertEvent(r.Context(), db.InsertEventParams{
+	event, err := q.InsertEvent(r.Context(), db.InsertEventParams{
 		TenantID:   webhook.TenantID,
 		WebhookID:  webhook.ID,
 		Source:     webhook.Source,
@@ -196,20 +208,33 @@ func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
 		DedupHash:  sql.NullString{}, // Set this if you want to deduplicate
 	})
 	if err != nil {
+		tx.Rollback()
 		wh.logger.Error("failed to insert event", zap.Error(err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	event := struct {
+	_, err = q.InsertEventProcessingQueue(r.Context(), event.ID)
+	if err != nil {
+		tx.Rollback()
+		wh.logger.Error("failed to queue event for processing", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		wh.logger.Error("failed to commit transaction", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	eventLog := struct {
 		Time    time.Time
 		Payload map[string]any
 	}{
 		Time:    time.Now().UTC(),
 		Payload: payload,
 	}
-	wh.logger.Info("event received", zap.Any("event", event))
+	wh.logger.Info("event received", zap.Any("event", eventLog))
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("event received"))
+	w.Write([]byte("event received and queued"))
 }
 
 func mustMarshalEvents(events []string) []byte {

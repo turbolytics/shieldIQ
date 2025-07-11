@@ -96,3 +96,13 @@ CREATE TABLE events
 );
 
 -- Indexes for fast rule lookup
+
+CREATE TABLE event_processing_queue (
+    id SERIAL PRIMARY KEY,
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'done', 'failed')),
+    locked_at TIMESTAMPTZ,
+    locked_by TEXT,
+    processed_at TIMESTAMPTZ,
+    error TEXT
+);

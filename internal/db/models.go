@@ -33,6 +33,16 @@ type Event struct {
 	ReceivedAt sql.NullTime    `json:"received_at"`
 }
 
+type EventProcessingQueue struct {
+	ID          int32          `json:"id"`
+	EventID     uuid.UUID      `json:"event_id"`
+	Status      string         `json:"status"`
+	LockedAt    sql.NullTime   `json:"locked_at"`
+	LockedBy    sql.NullString `json:"locked_by"`
+	ProcessedAt sql.NullTime   `json:"processed_at"`
+	Error       sql.NullString `json:"error"`
+}
+
 type NotificationChannel struct {
 	ID        uuid.UUID       `json:"id"`
 	TenantID  uuid.UUID       `json:"tenant_id"`
