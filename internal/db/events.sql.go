@@ -13,6 +13,27 @@ import (
 	"github.com/google/uuid"
 )
 
+const getEventByID = `-- name: GetEventByID :one
+SELECT id, tenant_id, webhook_id, source, event_type, action, raw_payload, dedup_hash, received_at FROM events WHERE id = $1
+`
+
+func (q *Queries) GetEventByID(ctx context.Context, id uuid.UUID) (Event, error) {
+	row := q.db.QueryRowContext(ctx, getEventByID, id)
+	var i Event
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.WebhookID,
+		&i.Source,
+		&i.EventType,
+		&i.Action,
+		&i.RawPayload,
+		&i.DedupHash,
+		&i.ReceivedAt,
+	)
+	return i, err
+}
+
 const insertEvent = `-- name: InsertEvent :one
 INSERT INTO events (
     tenant_id,

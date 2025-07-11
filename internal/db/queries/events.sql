@@ -12,3 +12,6 @@ INSERT INTO events (
 )
 RETURNING id, tenant_id, webhook_id, source, event_type, action, raw_payload, dedup_hash, received_at;
 
+-- name: GetEventByID :one
+SELECT id, tenant_id, webhook_id, source, event_type, action, raw_payload, dedup_hash, received_at FROM events WHERE id = $1;
+

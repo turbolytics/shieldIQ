@@ -106,6 +106,50 @@ func (q *Queries) GetRuleByID(ctx context.Context, arg GetRuleByIDParams) (Rule,
 	return i, err
 }
 
+const getRulesForEvent = `-- name: GetRulesForEvent :many
+SELECT id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at FROM rules WHERE tenant_id = $1 AND source = $2 AND event_type = $3
+`
+
+type GetRulesForEventParams struct {
+	TenantID  uuid.UUID `json:"tenant_id"`
+	Source    string    `json:"source"`
+	EventType string    `json:"event_type"`
+}
+
+func (q *Queries) GetRulesForEvent(ctx context.Context, arg GetRulesForEventParams) ([]Rule, error) {
+	rows, err := q.db.QueryContext(ctx, getRulesForEvent, arg.TenantID, arg.Source, arg.EventType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Rule
+	for rows.Next() {
+		var i Rule
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.Name,
+			&i.Description,
+			&i.Source,
+			&i.EventType,
+			&i.Sql,
+			&i.EvalType,
+			&i.AlertLevel,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRules = `-- name: ListRules :many
 SELECT id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at
 FROM rules

@@ -1,28 +1,60 @@
 package engine
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"go.uber.org/zap"
+	"log"
+	"os"
+
 	"github.com/spf13/cobra"
+	"github.com/turbolytics/sqlsec/internal/db"
+	enginepkg "github.com/turbolytics/sqlsec/internal/engine"
 )
 
 func NewCmd() *cobra.Command {
+	var dsn string
 	cmd := &cobra.Command{
 		Use:   "engine",
 		Short: "Engine related commands",
 	}
 
-	cmd.AddCommand(newRunCmd())
+	cmd.PersistentFlags().StringVar(&dsn, "dsn", os.Getenv("SQLSEC_DB_DSN"), "Postgres DSN (or set SQLSEC_DB_DSN env var)")
+	cmd.AddCommand(newRunCmd(&dsn))
 	cmd.AddCommand(newTestCmd())
 
 	return cmd
 }
 
-func newRunCmd() *cobra.Command {
+func newRunCmd(dsn *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "run",
 		Short: "Start the engine in daemon mode",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("engine run called")
+			logger, err := zap.NewDevelopment()
+			if err != nil {
+				log.Fatalf("failed to initialize zap logger: %v", err)
+			}
+			defer logger.Sync()
+
+			if *dsn == "" {
+				log.Fatal("Postgres DSN must be set via --dsn or SQLSEC_DB_DSN env var")
+			}
+			dbConn, err := sql.Open("postgres", *dsn)
+			if err != nil {
+				log.Fatalf("failed to connect to database: %v", err)
+			}
+			defer dbConn.Close()
+			queries := db.New(dbConn)
+			engine := enginepkg.New(
+				queries,
+				logger,
+			)
+			logger.Info("Starting engine daemon...")
+			if err := engine.Run(context.Background()); err != nil {
+				log.Fatalf("engine exited with error: %v", err)
+			}
 		},
 	}
 }

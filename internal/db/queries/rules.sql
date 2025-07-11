@@ -20,3 +20,5 @@ SELECT id, tenant_id, name, description, source, event_type, sql, eval_type, ale
 FROM rules
 WHERE id = $1 AND tenant_id = $2;
 
+-- name: GetRulesForEvent :many
+SELECT * FROM rules WHERE tenant_id = $1 AND source = $2 AND event_type = $3;

@@ -19,9 +19,11 @@ type Querier interface {
 	DeleteRule(ctx context.Context, arg DeleteRuleParams) error
 	DeleteRuleDestination(ctx context.Context, arg DeleteRuleDestinationParams) error
 	FetchNextEventForProcessing(ctx context.Context, lockedBy sql.NullString) (uuid.UUID, error)
+	GetEventByID(ctx context.Context, id uuid.UUID) (Event, error)
 	GetNotificationChannelByID(ctx context.Context, id uuid.UUID) (NotificationChannel, error)
 	GetNotificationChannelByTenantAndName(ctx context.Context, arg GetNotificationChannelByTenantAndNameParams) (NotificationChannel, error)
 	GetRuleByID(ctx context.Context, arg GetRuleByIDParams) (Rule, error)
+	GetRulesForEvent(ctx context.Context, arg GetRulesForEventParams) ([]Rule, error)
 	GetWebhook(ctx context.Context, arg GetWebhookParams) (Webhook, error)
 	InsertEvent(ctx context.Context, arg InsertEventParams) (Event, error)
 	InsertEventProcessingQueue(ctx context.Context, eventID uuid.UUID) (EventProcessingQueue, error)
