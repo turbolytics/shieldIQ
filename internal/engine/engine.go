@@ -12,8 +12,8 @@ import (
 
 // Engine is responsible for processing events and evaluating rules.
 type Engine struct {
-	eventQueries *events.Queries
-	ruleQueries  *rules.Queries
+	eventQueries events.Querier
+	ruleQueries  rules.Querier
 	logger       *zap.Logger
 }
 
