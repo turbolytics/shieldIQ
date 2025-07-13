@@ -3,7 +3,7 @@
 //   sqlc v1.27.0
 // source: webhooks.sql
 
-package db
+package webhooks
 
 import (
 	"context"

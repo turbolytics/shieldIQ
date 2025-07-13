@@ -6,7 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/turbolytics/sqlsec/internal"
-	"github.com/turbolytics/sqlsec/internal/db"
+	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"github.com/turbolytics/sqlsec/internal/source"
 	"net/http"
 	"strconv"
@@ -14,11 +14,13 @@ import (
 )
 
 type RuleHandlers struct {
-	queries *db.Queries
+	ruleQueries *rules.Queries
 }
 
-func NewRuleHandlers(queries *db.Queries) *RuleHandlers {
-	return &RuleHandlers{queries: queries}
+func NewRuleHandlers(ruleQueries *rules.Queries) *RuleHandlers {
+	return &RuleHandlers{
+		ruleQueries: ruleQueries,
+	}
 }
 
 type RuleCreateRequest struct {
@@ -57,7 +59,7 @@ func (h *RuleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
 	createdAt := time.Now().UTC()
 	// Insert into DB
-	dbRule, err := h.queries.CreateRule(r.Context(), db.CreateRuleParams{
+	dbRule, err := h.ruleQueries.CreateRule(r.Context(), rules.CreateRuleParams{
 		ID:          id,
 		TenantID:    tenantID,
 		Name:        req.Name,
@@ -104,7 +106,7 @@ func (h *RuleHandlers) List(w http.ResponseWriter, r *http.Request) {
 			offset = int32(v)
 		}
 	}
-	rules, err := h.queries.ListRules(r.Context(), db.ListRulesParams{
+	rules, err := h.ruleQueries.ListRules(r.Context(), rules.ListRulesParams{
 		TenantID: tenantID,
 		Limit:    limit,
 		Offset:   offset,
@@ -141,7 +143,7 @@ func (h *RuleHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	// TODO: get tenant_id from context/session
 	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
-	err = h.queries.DeleteRule(r.Context(), db.DeleteRuleParams{
+	err = h.ruleQueries.DeleteRule(r.Context(), rules.DeleteRuleParams{
 		ID:       id,
 		TenantID: tenantID,
 	})
@@ -184,7 +186,7 @@ func (h *RuleHandlers) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	// TODO: get tenant_id from context/session
 	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
-	dbRule, err := h.queries.GetRuleByID(r.Context(), db.GetRuleByIDParams{
+	dbRule, err := h.ruleQueries.GetRuleByID(r.Context(), rules.GetRuleByIDParams{
 		ID:       id,
 		TenantID: tenantID,
 	})

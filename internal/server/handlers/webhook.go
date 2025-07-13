@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/turbolytics/sqlsec/internal/auth"
+	"github.com/turbolytics/sqlsec/internal/db/queries/events"
+	"github.com/turbolytics/sqlsec/internal/db/queries/webhooks"
 	"github.com/turbolytics/sqlsec/internal/source"
 	"go.uber.org/zap"
 	"net/http"
@@ -13,7 +15,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/turbolytics/sqlsec/internal"
-	"github.com/turbolytics/sqlsec/internal/db"
 )
 
 type CreateWebhookRequest struct {
@@ -25,18 +26,26 @@ type CreateWebhookRequest struct {
 // Removed unused Server type declaration.
 
 // NewWebhook creates a new Webhook handler with the given options.
-func NewWebhook(dbConn *sql.DB, queries *db.Queries, logger *zap.Logger) *Webhook {
+func NewWebhook(
+	dbConn *sql.DB,
+	eventQueries *events.Queries,
+	webhookQueries *webhooks.Queries,
+	logger *zap.Logger,
+) *Webhook {
+
 	return &Webhook{
-		db:      dbConn,
-		queries: queries,
-		logger:  logger,
+		db:             dbConn,
+		eventQueries:   eventQueries,
+		webhookQueries: webhookQueries,
+		logger:         logger,
 	}
 }
 
 type Webhook struct {
-	queries *db.Queries
-	db      *sql.DB
-	logger  *zap.Logger
+	eventQueries   *events.Queries
+	webhookQueries *webhooks.Queries
+	db             *sql.DB
+	logger         *zap.Logger
 }
 
 func (wh *Webhook) Create(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +72,7 @@ func (wh *Webhook) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hook, err := wh.queries.CreateWebhook(r.Context(), db.CreateWebhookParams{
+	hook, err := wh.webhookQueries.CreateWebhook(r.Context(), webhooks.CreateWebhookParams{
 		ID:        id,
 		TenantID:  tenantID,
 		Name:      req.Name,
@@ -104,7 +113,7 @@ func (wh *Webhook) Get(w http.ResponseWriter, r *http.Request) {
 	// Hardcoded tenant_id for now
 	tid := uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
-	webhook, err := wh.queries.GetWebhook(r.Context(), db.GetWebhookParams{
+	webhook, err := wh.webhookQueries.GetWebhook(r.Context(), webhooks.GetWebhookParams{
 		ID:       id,
 		TenantID: tid,
 	})
@@ -139,7 +148,7 @@ func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
 	}
 	// Hardcoded tenant_id for now
 	tid := uuid.MustParse("00000000-0000-0000-0000-000000000000")
-	webhook, err := wh.queries.GetWebhook(r.Context(), db.GetWebhookParams{
+	webhook, err := wh.webhookQueries.GetWebhook(r.Context(), webhooks.GetWebhookParams{
 		ID:       id,
 		TenantID: tid,
 	})
@@ -183,7 +192,7 @@ func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	q := wh.queries.WithTx(tx)
+	q := wh.eventQueries.WithTx(tx)
 	eventType, err := parser.Type(r)
 	if err != nil {
 		tx.Rollback()
@@ -198,7 +207,7 @@ func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	event, err := q.InsertEvent(r.Context(), db.InsertEventParams{
+	event, err := q.InsertEvent(r.Context(), events.InsertEventParams{
 		TenantID:   webhook.TenantID,
 		WebhookID:  webhook.ID,
 		Source:     webhook.Source,

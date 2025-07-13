@@ -3,7 +3,7 @@
 //   sqlc v1.27.0
 // source: rules.sql
 
-package db
+package rules
 
 import (
 	"context"

@@ -2,20 +2,28 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/turbolytics/sqlsec/internal/db/queries/notificationchannels"
+	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/turbolytics/sqlsec/internal"
-	"github.com/turbolytics/sqlsec/internal/db"
 )
 
 type DestinationHandlers struct {
-	queries *db.Queries
+	ruleQueries                *rules.Queries
+	notificationChannelQueries *notificationchannels.Queries
 }
 
-func NewDestinationHandlers(queries *db.Queries) *DestinationHandlers {
-	return &DestinationHandlers{queries: queries}
+func NewDestinationHandlers(
+	ruleQueries *rules.Queries,
+	notificationChannelQueries *notificationchannels.Queries,
+) *DestinationHandlers {
+	return &DestinationHandlers{
+		ruleQueries:                ruleQueries,
+		notificationChannelQueries: notificationChannelQueries,
+	}
 }
 
 type DestinationCreateRequest struct {
@@ -42,7 +50,7 @@ func (h *DestinationHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	// TODO: get tenant_id from context/session
 	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
 	// Check that rule exists and is owned by tenant
-	_, err = h.queries.GetRuleByID(r.Context(), db.GetRuleByIDParams{
+	_, err = h.ruleQueries.GetRuleByID(r.Context(), rules.GetRuleByIDParams{
 		ID:       ruleID,
 		TenantID: tenantID,
 	})
@@ -62,13 +70,13 @@ func (h *DestinationHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Check that the channel exists and is owned by tenant
-	channel, err := h.queries.GetNotificationChannelByID(r.Context(), channelID)
+	channel, err := h.notificationChannelQueries.GetNotificationChannelByID(r.Context(), channelID)
 	if err != nil || channel.TenantID != tenantID {
 		http.Error(w, "notification channel not found or not owned by tenant", http.StatusNotFound)
 		return
 	}
 	// Attach destination to rule
-	_, err = h.queries.CreateRuleDestination(r.Context(), db.CreateRuleDestinationParams{
+	_, err = h.ruleQueries.CreateRuleDestination(r.Context(), rules.CreateRuleDestinationParams{
 		RuleID:    ruleID,
 		ChannelID: channelID,
 	})
@@ -99,7 +107,7 @@ func (h *DestinationHandlers) List(w http.ResponseWriter, r *http.Request) {
 	// TODO: get tenant_id from context/session
 	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
 	// Check that rule exists and is owned by tenant
-	_, err = h.queries.GetRuleByID(r.Context(), db.GetRuleByIDParams{
+	_, err = h.ruleQueries.GetRuleByID(r.Context(), rules.GetRuleByIDParams{
 		ID:       ruleID,
 		TenantID: tenantID,
 	})
@@ -107,7 +115,7 @@ func (h *DestinationHandlers) List(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "rule not found", http.StatusNotFound)
 		return
 	}
-	channels, err := h.queries.ListNotificationChannelsForRule(r.Context(), ruleID)
+	channels, err := h.ruleQueries.ListNotificationChannelsForRule(r.Context(), ruleID)
 	if err != nil {
 		http.Error(w, "failed to list destinations", http.StatusInternalServerError)
 		return
@@ -148,7 +156,7 @@ func (h *DestinationHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 	// TODO: get tenant_id from context/session
 	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
 	// Check that rule exists and is owned by tenant
-	_, err = h.queries.GetRuleByID(r.Context(), db.GetRuleByIDParams{
+	_, err = h.ruleQueries.GetRuleByID(r.Context(), rules.GetRuleByIDParams{
 		ID:       ruleID,
 		TenantID: tenantID,
 	})
@@ -157,7 +165,7 @@ func (h *DestinationHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Delete the rule destination
-	err = h.queries.DeleteRuleDestination(r.Context(), db.DeleteRuleDestinationParams{
+	err = h.ruleQueries.DeleteRuleDestination(r.Context(), rules.DeleteRuleDestinationParams{
 		RuleID:    ruleID,
 		ChannelID: destID,
 	})

@@ -3,7 +3,7 @@
 //   sqlc v1.27.0
 // source: notification_channels.sql
 
-package db
+package notificationchannels
 
 import (
 	"context"

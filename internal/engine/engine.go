@@ -4,21 +4,24 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/turbolytics/sqlsec/internal/db"
+	"github.com/turbolytics/sqlsec/internal/db/queries/events"
+	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"go.uber.org/zap"
 	"time"
 )
 
 // Engine is responsible for processing events and evaluating rules.
 type Engine struct {
-	queries *db.Queries
-	logger  *zap.Logger
+	eventQueries *events.Queries
+	ruleQueries  *rules.Queries
+	logger       *zap.Logger
 }
 
-func New(queries *db.Queries, l *zap.Logger) *Engine {
+func New(eventQueries *events.Queries, ruleQueries *rules.Queries, l *zap.Logger) *Engine {
 	return &Engine{
-		queries: queries,
-		logger:  l,
+		eventQueries: eventQueries,
+		ruleQueries:  ruleQueries,
+		logger:       l,
 	}
 }
 
@@ -77,7 +80,7 @@ func (e *Engine) ExecuteOnce(ctx context.Context) error {
 		}
 	}
 	// 4. Mark the event as processed
-	err = e.queries.MarkEventProcessingDone(ctx, event.ID)
+	err = e.eventQueries.MarkEventProcessingDone(ctx, event.ID)
 
 	return err
 }
@@ -97,17 +100,17 @@ func (e *Engine) Run(ctx context.Context) error {
 }
 
 // fetchNextEvent fetches the next event to process from the queue.
-func (e *Engine) fetchNextEvent(ctx context.Context) (*db.Event, error) {
+func (e *Engine) fetchNextEvent(ctx context.Context) (*events.Event, error) {
 	// Use the FetchNextEventForProcessing query to get the next event_id
 	lockedBy := sql.NullString{String: "engine-daemon", Valid: true}
-	eventID, err := e.queries.FetchNextEventForProcessing(ctx, lockedBy)
+	eventID, err := e.eventQueries.FetchNextEventForProcessing(ctx, lockedBy)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil // No event to process
 		}
 		return nil, err
 	}
-	event, err := e.queries.GetEventByID(ctx, eventID)
+	event, err := e.eventQueries.GetEventByID(ctx, eventID)
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +118,8 @@ func (e *Engine) fetchNextEvent(ctx context.Context) (*db.Event, error) {
 }
 
 // fetchRulesForEvent fetches rules associated with the event type.
-func (e *Engine) fetchRulesForEvent(ctx context.Context, event *db.Event) ([]db.Rule, error) {
-	return e.queries.GetRulesForEvent(ctx, db.GetRulesForEventParams{
+func (e *Engine) fetchRulesForEvent(ctx context.Context, event *events.Event) ([]rules.Rule, error) {
+	return e.ruleQueries.GetRulesForEvent(ctx, rules.GetRulesForEventParams{
 		TenantID:  event.TenantID,
 		Source:    event.Source,
 		EventType: event.EventType,
@@ -124,13 +127,13 @@ func (e *Engine) fetchRulesForEvent(ctx context.Context, event *db.Event) ([]db.
 }
 
 // executeRule runs a rule against an event and returns the result count.
-func (e *Engine) executeRule(ctx context.Context, rule db.Rule, event *db.Event) (int, error) {
+func (e *Engine) executeRule(ctx context.Context, rule rules.Rule, event *events.Event) (int, error) {
 	// TODO: Implement rule execution logic
 	return 0, nil
 }
 
 // saveAlert saves an alert to the alerts table if a rule is triggered.
-func (e *Engine) saveAlert(ctx context.Context, rule db.Rule, event *db.Event) error {
+func (e *Engine) saveAlert(ctx context.Context, rule rules.Rule, event *events.Event) error {
 	// TODO: Implement saving alert to alerts table
 	return nil
 }

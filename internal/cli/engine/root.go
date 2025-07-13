@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/turbolytics/sqlsec/internal/db/queries/events"
+	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"go.uber.org/zap"
 	"log"
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/turbolytics/sqlsec/internal/db"
 	enginepkg "github.com/turbolytics/sqlsec/internal/engine"
 )
 
@@ -46,9 +47,11 @@ func newRunCmd(dsn *string) *cobra.Command {
 				log.Fatalf("failed to connect to database: %v", err)
 			}
 			defer dbConn.Close()
-			queries := db.New(dbConn)
+			eventQueries := events.New(dbConn)
+			ruleQueries := rules.New(dbConn)
 			engine := enginepkg.New(
-				queries,
+				eventQueries,
+				ruleQueries,
 				logger,
 			)
 			logger.Info("Starting engine daemon...")
