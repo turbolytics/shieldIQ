@@ -1,12 +1,10 @@
-package engine
+package sandbox
 
 import (
 	"context"
 	"database/sql"
-	"github.com/apache/arrow-adbc/go/adbc/drivermgr"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 	"testing"
 
 	events "github.com/turbolytics/sqlsec/internal/db/queries/events"
@@ -70,8 +68,6 @@ func (s *stubRulesQueries) ExecuteRule(ctx context.Context, rule rules.Rule, eve
 
 func TestEngineExecuteRule_SingleResult(t *testing.T) {
 	ctx := context.Background()
-	stubEvents := &stubEventsQueries{}
-	stubRules := &stubRulesQueries{}
 
 	// Create dummy rule and event
 	rule := rules.Rule{
@@ -85,39 +81,22 @@ func TestEngineExecuteRule_SingleResult(t *testing.T) {
 		RawPayload: []byte(`{"key": "value"}`),
 	}
 
-	var drv drivermgr.Driver
-	db, err := drv.NewDatabase(map[string]string{
-		"driver":     "duckdb",
-		"entrypoint": "duckdb_adbc_init",
-		"path":       ":memory:",
-	})
+	sandbox, err := New(ctx,
+		WithDuckDBMemoryConnection(),
+	)
 	assert.NoError(t, err)
-	conn, err := db.Open(context.Background())
+	defer sandbox.Close()
+
+	err = sandbox.AddEvent(ctx, &event)
 	assert.NoError(t, err)
 
-	defer func() {
-		if err := conn.Close(); err != nil {
-			t.Fatalf("failed to close DuckDB connection: %v", err)
-		}
-	}()
-
-	engine := &Engine{
-		conn:         conn,
-		eventQueries: stubEvents,
-		ruleQueries:  stubRules,
-		logger:       zap.NewNop(),
-	}
-
-	result, err := engine.executeRule(ctx, rule, &event)
+	result, err := sandbox.ExecuteRule(ctx, rule)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, result)
 }
 
 func TestEngineExecuteRule_NoMatch(t *testing.T) {
 	ctx := context.Background()
-	stubEvents := &stubEventsQueries{}
-	stubRules := &stubRulesQueries{}
-
 	// Create dummy rule and event
 	rule := rules.Rule{
 		Sql: "select * from events where raw_payload->>'key' = 'nomatch'",
@@ -130,30 +109,16 @@ func TestEngineExecuteRule_NoMatch(t *testing.T) {
 		RawPayload: []byte(`{"key": "value"}`),
 	}
 
-	var drv drivermgr.Driver
-	db, err := drv.NewDatabase(map[string]string{
-		"driver":     "duckdb",
-		"entrypoint": "duckdb_adbc_init",
-		"path":       ":memory:",
-	})
+	sandbox, err := New(ctx,
+		WithDuckDBMemoryConnection(),
+	)
 	assert.NoError(t, err)
-	conn, err := db.Open(context.Background())
+	defer sandbox.Close()
+
+	err = sandbox.AddEvent(ctx, &event)
 	assert.NoError(t, err)
 
-	defer func() {
-		if err := conn.Close(); err != nil {
-			t.Fatalf("failed to close DuckDB connection: %v", err)
-		}
-	}()
-
-	engine := &Engine{
-		conn:         conn,
-		eventQueries: stubEvents,
-		ruleQueries:  stubRules,
-		logger:       zap.NewNop(),
-	}
-
-	result, err := engine.executeRule(ctx, rule, &event)
+	result, err := sandbox.ExecuteRule(ctx, rule)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, result)
 }

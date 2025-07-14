@@ -42,8 +42,9 @@ func newRunCmd(dsn *string) *cobra.Command {
 
 			var drv drivermgr.Driver
 			db, err := drv.NewDatabase(map[string]string{
-				"driver":     "/opt/homebrew/lib/libduckdb.dylib",
+				"driver":     "duckdb",
 				"entrypoint": "duckdb_adbc_init",
+				"path":       ":memory:",
 			})
 			if err != nil {
 				return fmt.Errorf("failed to initialize DuckDB driver: %w", err)

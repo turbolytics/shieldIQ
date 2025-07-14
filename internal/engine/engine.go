@@ -4,13 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"github.com/apache/arrow-adbc/go/adbc"
-	"github.com/apache/arrow-go/v18/arrow"
-	"github.com/apache/arrow-go/v18/arrow/array"
-	"github.com/apache/arrow-go/v18/arrow/memory"
 	"github.com/turbolytics/sqlsec/internal/db/queries/events"
 	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
+	"github.com/turbolytics/sqlsec/internal/engine/sandbox"
 	"go.uber.org/zap"
 	"time"
 )
@@ -63,15 +60,40 @@ func (e *Engine) ExecuteOnce(ctx context.Context) error {
 		zap.Int("rule_count", len(rules)),
 	)
 
+	box, err := sandbox.New(
+		sandbox.WithDuckDBMemoryConnection(),
+		sandbox.WithLogger(e.logger),
+	)
+	if err != nil {
+		e.logger.Error("Failed to create sandbox",
+			zap.Error(err),
+		)
+		return err
+	}
+	defer box.Close()
+
+	if err := box.AddEvent(ctx, event); err != nil {
+		e.logger.Error("Failed to add event to sandbox",
+			zap.String("event_id", event.ID.String()),
+			zap.Error(err),
+		)
+		return err
+	}
+
 	// 3. Loop through and run the rules against the event
 	for _, rule := range rules {
-		result, err := e.executeRule(ctx, rule, event)
+		es, err := box.ExecuteRule(ctx, rule)
 		if err != nil {
 			// Log error, continue to next rule
+			e.logger.Error("Failed to execute rule",
+				zap.String("event_id", event.ID.String()),
+				zap.String("rule_id", rule.ID.String()),
+				zap.Error(err),
+			)
 			continue
 		}
 		// 4. Any rule execution that returns > 0 result should be saved to alerts table
-		if result > 0 {
+		if len(es) > 0 {
 			if err := e.saveAlert(ctx, rule, event); err != nil {
 				e.logger.Error("Failed to save alert",
 					zap.String("event_id", event.ID.String()),
@@ -134,100 +156,6 @@ func (e *Engine) fetchRulesForEvent(ctx context.Context, event *events.Event) ([
 	})
 }
 
-// executeRule runs a rule against an event and returns the result count.
-func (e *Engine) executeRule(ctx context.Context, rule rules.Rule, event *events.Event) (int, error) {
-	if rule.Sql == "" {
-		return 0, fmt.Errorf("rule SQL is empty for rule ID %s", rule.ID)
-	}
-
-	// 1. Create the table if it doesn't exist
-	createTableSQL := `
-	CREATE TABLE IF NOT EXISTS events (
-		id UUID,
-		tenant_id UUID,
-		webhook_id UUID,
-		source TEXT,
-		event_type TEXT,
-		action TEXT,
-		raw_payload JSON,
-		dedup_hash TEXT,
-		received_at TIMESTAMP
-	);
-	TRUNCATE TABLE events;`
-
-	createTableStmt, err := e.conn.NewStatement()
-	if err != nil {
-		return 0, fmt.Errorf("create statement: %w", err)
-	}
-	defer createTableStmt.Close()
-	if err := createTableStmt.SetSqlQuery(createTableSQL); err != nil {
-		return -1, fmt.Errorf("set query error: %v", err)
-	}
-	reader, _, err := createTableStmt.ExecuteQuery(ctx)
-	if err != nil {
-		return -1, fmt.Errorf("query execution error: %v", err)
-	}
-	defer reader.Release()
-	for reader.Next() {
-		reader.Release()
-	}
-
-	// 2. Insert the event
-	insertSQL := `INSERT INTO events (
-		id, tenant_id, webhook_id, source, event_type, action, raw_payload, dedup_hash, received_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-
-	insertStmt, err := e.conn.NewStatement()
-	if err != nil {
-		return -1, fmt.Errorf("new insert stmt: %w", err)
-	}
-	defer insertStmt.Close()
-
-	if err := insertStmt.SetSqlQuery(insertSQL); err != nil {
-		return -1, fmt.Errorf("set insert sql: %w", err)
-	}
-
-	r := arrowRecordFromEvent(event)
-	if err := insertStmt.Bind(ctx, r); err != nil {
-		return -1, fmt.Errorf("bind insert: %w", err)
-	}
-
-	if _, err := insertStmt.ExecuteUpdate(ctx); err != nil {
-		return -1, fmt.Errorf("execute insert: %w", err)
-	}
-
-	// 3. Execute the rule SQL
-	ruleStmt, err := e.conn.NewStatement()
-	if err != nil {
-		return -1, fmt.Errorf("new rule stmt: %w", err)
-	}
-	defer ruleStmt.Close()
-
-	e.logger.Debug("Executing rule SQL",
-		zap.String("rule_id", rule.ID.String()),
-	)
-
-	if err := ruleStmt.SetSqlQuery(rule.Sql); err != nil {
-		return -1, fmt.Errorf("set rule sql: %w", err)
-	}
-	reader, _, err = ruleStmt.ExecuteQuery(ctx)
-	if err != nil {
-		return -1, fmt.Errorf("execute rule sql: %w", err)
-	}
-	defer reader.Release()
-
-	// 4. Count rows
-	count := 0
-	for reader.Next() {
-		count++
-	}
-	if err := reader.Err(); err != nil {
-		return -1, fmt.Errorf("read rule results: %w", err)
-	}
-
-	return count, nil
-}
-
 // saveAlert saves an alert to the alerts table if a rule is triggered.
 func (e *Engine) saveAlert(ctx context.Context, rule rules.Rule, event *events.Event) error {
 	// TODO: Implement saving alert to alerts table
@@ -237,36 +165,3 @@ func (e *Engine) saveAlert(ctx context.Context, rule rules.Rule, event *events.E
 /*
 The engine is the rules engine, responsible for processing events and evaluating rules.
 */
-
-func arrowRecordFromEvent(event *events.Event) arrow.Record {
-	pool := memory.NewGoAllocator()
-
-	schema := arrow.NewSchema([]arrow.Field{
-		{Name: "id", Type: arrow.BinaryTypes.String},
-		{Name: "tenant_id", Type: arrow.BinaryTypes.String},
-		{Name: "webhook_id", Type: arrow.BinaryTypes.String},
-		{Name: "source", Type: arrow.BinaryTypes.String},
-		{Name: "event_type", Type: arrow.BinaryTypes.String},
-		{Name: "action", Type: arrow.BinaryTypes.String},
-		{Name: "raw_payload", Type: arrow.BinaryTypes.String},
-		{Name: "dedup_hash", Type: arrow.BinaryTypes.String},
-		{Name: "received_at", Type: arrow.FixedWidthTypes.Timestamp_ms},
-	}, nil)
-
-	b := array.NewRecordBuilder(pool, schema)
-	defer b.Release()
-
-	payload, _ := event.RawPayload.MarshalJSON()
-
-	b.Field(0).(*array.StringBuilder).Append(event.ID.String())
-	b.Field(1).(*array.StringBuilder).Append(event.TenantID.String())
-	b.Field(2).(*array.StringBuilder).Append(event.WebhookID.String())
-	b.Field(3).(*array.StringBuilder).Append(event.Source)
-	b.Field(4).(*array.StringBuilder).Append(event.EventType)
-	b.Field(5).(*array.StringBuilder).Append(event.Action.String)
-	b.Field(6).(*array.StringBuilder).Append(string(payload))
-	b.Field(7).(*array.StringBuilder).Append(event.DedupHash.String)
-	b.Field(8).(*array.TimestampBuilder).Append(arrow.Timestamp(event.ReceivedAt.Time.UnixMilli()))
-
-	return b.NewRecord()
-}
