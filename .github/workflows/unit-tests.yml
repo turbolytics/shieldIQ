@@ -18,6 +18,12 @@ jobs:
           go-version: '1.22.x'
       - name: Install dependencies
         run: go mod download
+      - name: Install DuckDB shared library
+        run: |
+          curl -L https://github.com/duckdb/duckdb/releases/latest/download/duckdb_linux_amd64.zip -o duckdb.zip
+          unzip duckdb.zip -d duckdb_lib
+          sudo cp duckdb_lib/libduckdb.so /usr/lib/
+      - name: Build
+        run: make build
       - name: Run unit tests
-        run: make test
-
+        run: LD_LIBRARY_PATH=/usr/lib make test
