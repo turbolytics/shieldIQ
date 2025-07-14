@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/apache/arrow-adbc/go/adbc/drivermgr"
 	"github.com/turbolytics/sqlsec/internal/db/queries/events"
 	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"go.uber.org/zap"
@@ -32,12 +33,31 @@ func newRunCmd(dsn *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "run",
 		Short: "Start the engine in daemon mode",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, err := zap.NewDevelopment()
 			if err != nil {
 				log.Fatalf("failed to initialize zap logger: %v", err)
 			}
 			defer logger.Sync()
+
+			var drv drivermgr.Driver
+			db, err := drv.NewDatabase(map[string]string{
+				"driver":     "/opt/homebrew/lib/libduckdb.dylib",
+				"entrypoint": "duckdb_adbc_init",
+			})
+			if err != nil {
+				return fmt.Errorf("failed to initialize DuckDB driver: %w", err)
+			}
+
+			conn, err := db.Open(context.Background())
+			if err != nil {
+				return fmt.Errorf("failed to open DuckDB connection: %w", err)
+			}
+			defer func() {
+				if err := conn.Close(); err != nil {
+					logger.Error("failed to close DuckDB connection", zap.Error(err))
+				}
+			}()
 
 			if *dsn == "" {
 				log.Fatal("Postgres DSN must be set via --dsn or SQLSEC_DB_DSN env var")
@@ -50,6 +70,7 @@ func newRunCmd(dsn *string) *cobra.Command {
 			eventQueries := events.New(dbConn)
 			ruleQueries := rules.New(dbConn)
 			engine := enginepkg.New(
+				conn,
 				eventQueries,
 				ruleQueries,
 				logger,
@@ -58,6 +79,7 @@ func newRunCmd(dsn *string) *cobra.Command {
 			if err := engine.Run(context.Background()); err != nil {
 				log.Fatalf("engine exited with error: %v", err)
 			}
+			return nil
 		},
 	}
 }
