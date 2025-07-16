@@ -61,6 +61,7 @@ func (e *Engine) ExecuteOnce(ctx context.Context) error {
 	)
 
 	box, err := sandbox.New(
+		ctx,
 		sandbox.WithDuckDBMemoryConnection(),
 		sandbox.WithLogger(e.logger),
 	)
@@ -82,7 +83,7 @@ func (e *Engine) ExecuteOnce(ctx context.Context) error {
 
 	// 3. Loop through and run the rules against the event
 	for _, rule := range rules {
-		es, err := box.ExecuteRule(ctx, rule)
+		n, err := box.ExecuteRule(ctx, rule)
 		if err != nil {
 			// Log error, continue to next rule
 			e.logger.Error("Failed to execute rule",
@@ -93,7 +94,7 @@ func (e *Engine) ExecuteOnce(ctx context.Context) error {
 			continue
 		}
 		// 4. Any rule execution that returns > 0 result should be saved to alerts table
-		if len(es) > 0 {
+		if n > 0 {
 			if err := e.saveAlert(ctx, rule, event); err != nil {
 				e.logger.Error("Failed to save alert",
 					zap.String("event_id", event.ID.String()),
@@ -104,7 +105,7 @@ func (e *Engine) ExecuteOnce(ctx context.Context) error {
 				e.logger.Debug("Alert saved",
 					zap.String("event_id", event.ID.String()),
 					zap.String("rule_id", rule.ID.String()),
-					zap.Int("result_count", result),
+					zap.Int("result_count", n),
 				)
 			}
 		}

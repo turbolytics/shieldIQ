@@ -68,4 +68,9 @@ SQLSEC_DB_DSN=postgres://sqlsec:sqlsec@localhost:5432/sqlsec?sslmode=disable go 
 
 ```
 docker exec -it sqlsec_postgres psql -U sqlsec
+``
+
+- Install Duckdb
+```
+DYLD_LIBRARY_PATH=/opt/homebrew/lib make test
 ```
