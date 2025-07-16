@@ -31,6 +31,15 @@ type RuleCreateRequest struct {
 	Condition      string `json:"condition"`
 	EvaluationType string `json:"evaluation_type"`
 	AlertLevel     string `json:"alert_level"`
+	Active         *bool  `json:"active,omitempty"`
+}
+
+// PATCH request for toggling active flag
+// Only supports toggling 'active' for now
+// Extendable for other fields
+
+type RulePatchRequest struct {
+	Active *bool `json:"active"`
 }
 
 type TestRuleRequest struct {
@@ -58,6 +67,10 @@ func (h *RuleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	// TODO: get tenant_id from context/session
 	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
 	createdAt := time.Now().UTC()
+	active := false
+	if req.Active != nil {
+		active = *req.Active
+	}
 	// Insert into DB
 	dbRule, err := h.ruleQueries.CreateRule(r.Context(), rules.CreateRuleParams{
 		ID:          id,
@@ -70,6 +83,7 @@ func (h *RuleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		EvalType:    req.EvaluationType,
 		AlertLevel:  req.AlertLevel,
 		CreatedAt:   createdAt,
+		Active:      active,
 	})
 	if err != nil {
 		http.Error(w, "failed to create rule", http.StatusInternalServerError)
@@ -85,6 +99,7 @@ func (h *RuleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		SQL:            dbRule.Sql,
 		CreatedAt:      dbRule.CreatedAt,
 		AlertLevel:     internal.AlertLevel(dbRule.AlertLevel),
+		Active:         dbRule.Active,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -204,6 +219,51 @@ func (h *RuleHandlers) Get(w http.ResponseWriter, r *http.Request) {
 		SQL:            dbRule.Sql,
 		CreatedAt:      dbRule.CreatedAt,
 		AlertLevel:     internal.AlertLevel(dbRule.AlertLevel),
+		Active:         dbRule.Active,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *RuleHandlers) Patch(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	var req RulePatchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	if req.Active == nil {
+		http.Error(w, "missing active field", http.StatusBadRequest)
+		return
+	}
+	// TODO: get tenant_id from context/session
+	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
+	// Update rule
+	dbRule, err := h.ruleQueries.UpdateRuleActive(r.Context(), rules.UpdateRuleActiveParams{
+		ID:       id,
+		TenantID: tenantID,
+		Active:   *req.Active,
+	})
+	if err != nil {
+		http.Error(w, "failed to update rule", http.StatusInternalServerError)
+		return
+	}
+	resp := internal.Rule{
+		ID:             dbRule.ID.String(),
+		Name:           dbRule.Name,
+		Description:    dbRule.Description.String,
+		EvaluationType: internal.EvaluationType(dbRule.EvalType),
+		EventSource:    dbRule.Source,
+		EventType:      dbRule.EventType,
+		SQL:            dbRule.Sql,
+		CreatedAt:      dbRule.CreatedAt,
+		AlertLevel:     internal.AlertLevel(dbRule.AlertLevel),
+		Active:         dbRule.Active,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)

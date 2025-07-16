@@ -59,6 +59,7 @@ func RegisterRoutes(wr *chi.Mux, wh *handlers.Webhook, nh *handlers.Notification
 			wr.Get("/", rh.List)
 			wr.Get("/{id}", rh.Get)
 			wr.Delete("/{id}", rh.Delete)
+			wr.Patch("/{id}", rh.Patch)
 			wr.Post("/{id}/test", rh.Test)
 		})
 

@@ -38,7 +38,8 @@ CREATE TABLE rules
         CHECK (eval_type IN ('LIVE_TRIGGER')),
     alert_level TEXT        NOT NULL DEFAULT 'MEDIUM'
         CHECK (alert_level IN ('LOW', 'MEDIUM', 'HIGH')),
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    active      BOOLEAN     NOT NULL DEFAULT false
 );
 
 CREATE INDEX rules_tenant_idx ON rules (tenant_id);

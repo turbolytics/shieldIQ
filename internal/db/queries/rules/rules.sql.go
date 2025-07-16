@@ -15,10 +15,10 @@ import (
 
 const createRule = `-- name: CreateRule :one
 INSERT INTO rules (
-    id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at
+    id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at, active
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-) RETURNING id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+) RETURNING id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at, active
 `
 
 type CreateRuleParams struct {
@@ -32,6 +32,7 @@ type CreateRuleParams struct {
 	EvalType    string         `json:"eval_type"`
 	AlertLevel  string         `json:"alert_level"`
 	CreatedAt   time.Time      `json:"created_at"`
+	Active      bool           `json:"active"`
 }
 
 func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (Rule, error) {
@@ -46,6 +47,7 @@ func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (Rule, e
 		arg.EvalType,
 		arg.AlertLevel,
 		arg.CreatedAt,
+		arg.Active,
 	)
 	var i Rule
 	err := row.Scan(
@@ -59,6 +61,7 @@ func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (Rule, e
 		&i.EvalType,
 		&i.AlertLevel,
 		&i.CreatedAt,
+		&i.Active,
 	)
 	return i, err
 }
@@ -78,7 +81,7 @@ func (q *Queries) DeleteRule(ctx context.Context, arg DeleteRuleParams) error {
 }
 
 const getRuleByID = `-- name: GetRuleByID :one
-SELECT id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at
+SELECT id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at, active
 FROM rules
 WHERE id = $1 AND tenant_id = $2
 `
@@ -102,12 +105,13 @@ func (q *Queries) GetRuleByID(ctx context.Context, arg GetRuleByIDParams) (Rule,
 		&i.EvalType,
 		&i.AlertLevel,
 		&i.CreatedAt,
+		&i.Active,
 	)
 	return i, err
 }
 
 const getRulesForEvent = `-- name: GetRulesForEvent :many
-SELECT id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at FROM rules WHERE tenant_id = $1 AND source = $2 AND event_type = $3
+SELECT id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at, active FROM rules WHERE tenant_id = $1 AND source = $2 AND event_type = $3 AND active = true
 `
 
 type GetRulesForEventParams struct {
@@ -136,6 +140,7 @@ func (q *Queries) GetRulesForEvent(ctx context.Context, arg GetRulesForEventPara
 			&i.EvalType,
 			&i.AlertLevel,
 			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -151,7 +156,7 @@ func (q *Queries) GetRulesForEvent(ctx context.Context, arg GetRulesForEventPara
 }
 
 const listRules = `-- name: ListRules :many
-SELECT id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at
+SELECT id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at, active
 FROM rules
 WHERE tenant_id = $1
 ORDER BY created_at DESC
@@ -184,6 +189,7 @@ func (q *Queries) ListRules(ctx context.Context, arg ListRulesParams) ([]Rule, e
 			&i.EvalType,
 			&i.AlertLevel,
 			&i.CreatedAt,
+			&i.Active,
 		); err != nil {
 			return nil, err
 		}
@@ -196,4 +202,36 @@ func (q *Queries) ListRules(ctx context.Context, arg ListRulesParams) ([]Rule, e
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateRuleActive = `-- name: UpdateRuleActive :one
+UPDATE rules
+SET active = $3
+WHERE id = $1 AND tenant_id = $2
+RETURNING id, tenant_id, name, description, source, event_type, sql, eval_type, alert_level, created_at, active
+`
+
+type UpdateRuleActiveParams struct {
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+	Active   bool      `json:"active"`
+}
+
+func (q *Queries) UpdateRuleActive(ctx context.Context, arg UpdateRuleActiveParams) (Rule, error) {
+	row := q.db.QueryRowContext(ctx, updateRuleActive, arg.ID, arg.TenantID, arg.Active)
+	var i Rule
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Name,
+		&i.Description,
+		&i.Source,
+		&i.EventType,
+		&i.Sql,
+		&i.EvalType,
+		&i.AlertLevel,
+		&i.CreatedAt,
+		&i.Active,
+	)
+	return i, err
 }

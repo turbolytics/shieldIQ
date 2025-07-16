@@ -63,6 +63,7 @@ type Rule struct {
 	EvalType    string         `json:"eval_type"`
 	AlertLevel  string         `json:"alert_level"`
 	CreatedAt   time.Time      `json:"created_at"`
+	Active      bool           `json:"active"`
 }
 
 type RuleDestination struct {

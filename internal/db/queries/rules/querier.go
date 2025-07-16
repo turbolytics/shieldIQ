@@ -20,6 +20,7 @@ type Querier interface {
 	ListNotificationChannelsForRule(ctx context.Context, ruleID uuid.UUID) ([]NotificationChannel, error)
 	ListRuleDestinationChannelIDs(ctx context.Context, ruleID uuid.UUID) ([]uuid.UUID, error)
 	ListRules(ctx context.Context, arg ListRulesParams) ([]Rule, error)
+	UpdateRuleActive(ctx context.Context, arg UpdateRuleActiveParams) (Rule, error)
 }
 
 var _ Querier = (*Queries)(nil)
