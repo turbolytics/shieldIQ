@@ -50,4 +50,5 @@ type Rule struct {
 	// NotificationChannels []string       `json:"notification_ids"` // Channels to alert
 	CreatedAt  time.Time  `json:"created_at"`
 	AlertLevel AlertLevel `json:"alert_level"`
+	Active     bool       `json:"active"` // Whether the rule is currently active
 }

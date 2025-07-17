@@ -12,6 +12,7 @@ type Validator interface {
 
 type Parser interface {
 	Parse(r *http.Request) (map[string]any, error)
+	Type(r *http.Request) (string, error)
 }
 
 type Registry struct {

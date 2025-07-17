@@ -2,11 +2,55 @@ version: "2"
 sql:
   - engine: "postgresql"
     schema: "schema.sql"
-    queries: "internal/db/queries"
+    queries: "internal/db/queries/events"
     gen:
       go:
-        package: "db"
-        out: "internal/db"
+        package: "events"
+        out: "internal/db/queries/events"
+        emit_json_tags: true
+        emit_interface: true
+        emit_exact_table_names: false
+
+  - engine: "postgresql"
+    schema: "schema.sql"
+    queries: "internal/db/queries/rules"
+    gen:
+      go:
+        package: "rules"
+        out: "internal/db/queries/rules"
+        emit_json_tags: true
+        emit_interface: true
+        emit_exact_table_names: false
+
+  - engine: "postgresql"
+    schema: "schema.sql"
+    queries: "internal/db/queries/notificationchannels"
+    gen:
+      go:
+        package: "notificationchannels"
+        out: "internal/db/queries/notificationchannels"
+        emit_json_tags: true
+        emit_interface: true
+        emit_exact_table_names: false
+
+  - engine: "postgresql"
+    schema: "schema.sql"
+    queries: "internal/db/queries/webhooks"
+    gen:
+      go:
+        package: "webhooks"
+        out: "internal/db/queries/webhooks"
+        emit_json_tags: true
+        emit_interface: true
+        emit_exact_table_names: false
+
+  - engine: "postgresql"
+    schema: "schema.sql"
+    queries: "internal/db/queries/alerts"
+    gen:
+      go:
+        package: "alerts"
+        out: "internal/db/queries/alerts"
         emit_json_tags: true
         emit_interface: true
         emit_exact_table_names: false

@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.27.0
 
-package db
+package rules
 
 import (
 	"context"
@@ -11,20 +11,16 @@ import (
 )
 
 type Querier interface {
-	CreateNotificationChannel(ctx context.Context, arg CreateNotificationChannelParams) (NotificationChannel, error)
 	CreateRule(ctx context.Context, arg CreateRuleParams) (Rule, error)
 	CreateRuleDestination(ctx context.Context, arg CreateRuleDestinationParams) (RuleDestination, error)
-	CreateWebhook(ctx context.Context, arg CreateWebhookParams) (Webhook, error)
 	DeleteRule(ctx context.Context, arg DeleteRuleParams) error
 	DeleteRuleDestination(ctx context.Context, arg DeleteRuleDestinationParams) error
-	GetNotificationChannelByID(ctx context.Context, id uuid.UUID) (NotificationChannel, error)
-	GetNotificationChannelByTenantAndName(ctx context.Context, arg GetNotificationChannelByTenantAndNameParams) (NotificationChannel, error)
 	GetRuleByID(ctx context.Context, arg GetRuleByIDParams) (Rule, error)
-	GetWebhook(ctx context.Context, arg GetWebhookParams) (Webhook, error)
-	ListNotificationChannels(ctx context.Context, tenantID uuid.UUID) ([]NotificationChannel, error)
+	GetRulesForEvent(ctx context.Context, arg GetRulesForEventParams) ([]Rule, error)
 	ListNotificationChannelsForRule(ctx context.Context, ruleID uuid.UUID) ([]NotificationChannel, error)
 	ListRuleDestinationChannelIDs(ctx context.Context, ruleID uuid.UUID) ([]uuid.UUID, error)
 	ListRules(ctx context.Context, arg ListRulesParams) ([]Rule, error)
+	UpdateRuleActive(ctx context.Context, arg UpdateRuleActiveParams) (Rule, error)
 }
 
 var _ Querier = (*Queries)(nil)

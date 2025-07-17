@@ -2,7 +2,10 @@ package serve
 
 import (
 	"database/sql"
-	"github.com/turbolytics/sqlsec/internal/db"
+	"github.com/turbolytics/sqlsec/internal/db/queries/events"
+	"github.com/turbolytics/sqlsec/internal/db/queries/notificationchannels"
+	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
+	"github.com/turbolytics/sqlsec/internal/db/queries/webhooks"
 	"github.com/turbolytics/sqlsec/internal/server"
 	"github.com/turbolytics/sqlsec/internal/server/handlers"
 	"log"
@@ -37,11 +40,19 @@ func NewCommand() *cobra.Command {
 			}
 			defer dbConn.Close()
 
-			queries := db.New(dbConn)
-			wh := handlers.NewWebhook(queries, logger)
-			nh := handlers.NewNotificationHandlers(queries)
-			rh := handlers.NewRuleHandlers(queries)
-			dh := handlers.NewDestinationHandlers(queries)
+			eventQueries := events.New(dbConn)
+			ruleQueries := rules.New(dbConn)
+			ncQueries := notificationchannels.New(dbConn)
+			webhookQueries := webhooks.New(dbConn)
+			wh := handlers.NewWebhook(
+				dbConn,
+				eventQueries,
+				webhookQueries,
+				logger,
+			)
+			nh := handlers.NewNotificationHandlers(ncQueries)
+			rh := handlers.NewRuleHandlers(ruleQueries)
+			dh := handlers.NewDestinationHandlers(ruleQueries, ncQueries)
 			router := chi.NewRouter()
 			server.RegisterRoutes(router, wh, nh, rh, dh, logger)
 

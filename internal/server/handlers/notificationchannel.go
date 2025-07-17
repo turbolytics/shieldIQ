@@ -5,18 +5,20 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/turbolytics/sqlsec/internal"
-	"github.com/turbolytics/sqlsec/internal/db"
+	"github.com/turbolytics/sqlsec/internal/db/queries/notificationchannels"
 	"github.com/turbolytics/sqlsec/internal/notify"
 	_ "github.com/turbolytics/sqlsec/internal/notify/slack"
 	"net/http"
 )
 
 type NotificationHandlers struct {
-	queries *db.Queries
+	ncQueries *notificationchannels.Queries
 }
 
-func NewNotificationHandlers(queries *db.Queries) *NotificationHandlers {
-	return &NotificationHandlers{queries: queries}
+func NewNotificationHandlers(ncQueries *notificationchannels.Queries) *NotificationHandlers {
+	return &NotificationHandlers{
+		ncQueries: ncQueries,
+	}
 }
 
 type CreateNotificationChannelRequest struct {
@@ -43,9 +45,10 @@ func (h *NotificationHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	configJSON, _ := json.Marshal(req.Config)
-	ch, err := h.queries.CreateNotificationChannel(r.Context(), db.CreateNotificationChannelParams{
+	ch, err := h.ncQueries.CreateNotificationChannel(r.Context(), notificationchannels.CreateNotificationChannelParams{
 		ID:       id,
 		TenantID: tenantID,
+		Name:     req.Name,
 		Type:     req.Type,
 		Config:   configJSON,
 	})
@@ -56,7 +59,7 @@ func (h *NotificationHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	resp := internal.NotificationChannel{
 		ID:        ch.ID,
 		TenantID:  ch.TenantID,
-		Name:      req.Name, // Name is not in DB yet, so use request value
+		Name:      ch.Name,
 		Type:      ch.Type,
 		Config:    ch.Config,
 		CreatedAt: ch.CreatedAt.Time, // ch.CreatedAt is sql.NullTime
@@ -70,7 +73,7 @@ func (h *NotificationHandlers) List(w http.ResponseWriter, r *http.Request) {
 	// TODO: get tenant_id from context/session
 	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
-	chs, err := h.queries.ListNotificationChannels(r.Context(), tenantID)
+	chs, err := h.ncQueries.ListNotificationChannels(r.Context(), tenantID)
 	if err != nil {
 		http.Error(w, "failed to list", http.StatusInternalServerError)
 		return
@@ -97,7 +100,7 @@ func (h *NotificationHandlers) Test(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	ch, err := h.queries.GetNotificationChannelByID(r.Context(), id)
+	ch, err := h.ncQueries.GetNotificationChannelByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, "notification channel not found", http.StatusNotFound)
 		return

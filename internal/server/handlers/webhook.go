@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/turbolytics/sqlsec/internal/auth"
+	"github.com/turbolytics/sqlsec/internal/db/queries/events"
+	"github.com/turbolytics/sqlsec/internal/db/queries/webhooks"
 	"github.com/turbolytics/sqlsec/internal/source"
 	"go.uber.org/zap"
 	"net/http"
@@ -13,7 +15,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/turbolytics/sqlsec/internal"
-	"github.com/turbolytics/sqlsec/internal/db"
 )
 
 type CreateWebhookRequest struct {
@@ -25,16 +26,26 @@ type CreateWebhookRequest struct {
 // Removed unused Server type declaration.
 
 // NewWebhook creates a new Webhook handler with the given options.
-func NewWebhook(queries *db.Queries, logger *zap.Logger) *Webhook {
+func NewWebhook(
+	dbConn *sql.DB,
+	eventQueries *events.Queries,
+	webhookQueries *webhooks.Queries,
+	logger *zap.Logger,
+) *Webhook {
+
 	return &Webhook{
-		queries: queries,
-		logger:  logger,
+		db:             dbConn,
+		eventQueries:   eventQueries,
+		webhookQueries: webhookQueries,
+		logger:         logger,
 	}
 }
 
 type Webhook struct {
-	queries *db.Queries
-	logger  *zap.Logger
+	eventQueries   *events.Queries
+	webhookQueries *webhooks.Queries
+	db             *sql.DB
+	logger         *zap.Logger
 }
 
 func (wh *Webhook) Create(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +72,7 @@ func (wh *Webhook) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hook, err := wh.queries.CreateWebhook(r.Context(), db.CreateWebhookParams{
+	hook, err := wh.webhookQueries.CreateWebhook(r.Context(), webhooks.CreateWebhookParams{
 		ID:        id,
 		TenantID:  tenantID,
 		Name:      req.Name,
@@ -102,7 +113,7 @@ func (wh *Webhook) Get(w http.ResponseWriter, r *http.Request) {
 	// Hardcoded tenant_id for now
 	tid := uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
-	webhook, err := wh.queries.GetWebhook(r.Context(), db.GetWebhookParams{
+	webhook, err := wh.webhookQueries.GetWebhook(r.Context(), webhooks.GetWebhookParams{
 		ID:       id,
 		TenantID: tid,
 	})
@@ -137,7 +148,7 @@ func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
 	}
 	// Hardcoded tenant_id for now
 	tid := uuid.MustParse("00000000-0000-0000-0000-000000000000")
-	webhook, err := wh.queries.GetWebhook(r.Context(), db.GetWebhookParams{
+	webhook, err := wh.webhookQueries.GetWebhook(r.Context(), webhooks.GetWebhookParams{
 		ID:       id,
 		TenantID: tid,
 	})
@@ -173,16 +184,66 @@ func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
-	event := struct {
+	// Insert event and queue in a transaction
+	tx, err := wh.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		wh.logger.Error("failed to begin transaction", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	q := wh.eventQueries.WithTx(tx)
+	eventType, err := parser.Type(r)
+	if err != nil {
+		tx.Rollback()
+		wh.logger.Warn("failed to get event type", zap.Error(err))
+		http.Error(w, "invalid event type", http.StatusBadRequest)
+		return
+	}
+	rawPayload, err := json.Marshal(payload)
+	if err != nil {
+		tx.Rollback()
+		wh.logger.Error("failed to marshal payload", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	event, err := q.InsertEvent(r.Context(), events.InsertEventParams{
+		TenantID:   webhook.TenantID,
+		WebhookID:  webhook.ID,
+		Source:     webhook.Source,
+		EventType:  eventType,
+		Action:     sql.NullString{}, // Set this if you can extract from payload
+		RawPayload: rawPayload,
+		DedupHash:  sql.NullString{}, // Set this if you want to deduplicate
+	})
+	if err != nil {
+		tx.Rollback()
+		wh.logger.Error("failed to insert event", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	_, err = q.InsertEventProcessingQueue(r.Context(), event.ID)
+	if err != nil {
+		tx.Rollback()
+		wh.logger.Error("failed to queue event for processing", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		wh.logger.Error("failed to commit transaction", zap.Error(err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	eventLog := struct {
 		Time    time.Time
 		Payload map[string]any
 	}{
 		Time:    time.Now().UTC(),
 		Payload: payload,
 	}
-	wh.logger.Info("event received", zap.Any("event", event))
+	wh.logger.Info("event received", zap.Any("event", eventLog))
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("event received"))
+	w.Write([]byte("event received and queued"))
 }
 
 func mustMarshalEvents(events []string) []byte {

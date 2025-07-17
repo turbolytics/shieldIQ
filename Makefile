@@ -1,4 +1,3 @@
-
 .PHONY: start-backing-services
 start-backing-services:
 	@echo "Starting backing services..."
@@ -21,3 +20,11 @@ test-hurl:
 sqlc-generate:
 	@echo "Generating SQLC code..."
 	sqlc generate
+
+.PHONY: test
+test:
+	go test -v ./...
+
+.PHONY: test-macos
+test-macos:
+	./scripts/test.sh

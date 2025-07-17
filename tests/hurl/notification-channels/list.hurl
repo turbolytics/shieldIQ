@@ -2,7 +2,7 @@ POST http://localhost:8888/api/notification-channels
 Content-Type: application/json
 
 {
-  "name": "Test Slack Channel",
+  "name": "{{newUuid}}",
   "type": "slack",
   "config": {
     "webhook_url": "https://hooks.slack.com/services/XXX/YYY/ZZZ"

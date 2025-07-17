@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.27.0
 
-package db
+package webhooks
 
 import (
 	"database/sql"
@@ -13,12 +13,34 @@ import (
 )
 
 type Alert struct {
-	ID          uuid.UUID       `json:"id"`
-	TenantID    uuid.UUID       `json:"tenant_id"`
-	RuleID      uuid.NullUUID   `json:"rule_id"`
-	Event       json.RawMessage `json:"event"`
-	TriggeredAt sql.NullTime    `json:"triggered_at"`
-	Notified    sql.NullBool    `json:"notified"`
+	ID          uuid.UUID    `json:"id"`
+	TenantID    uuid.UUID    `json:"tenant_id"`
+	RuleID      uuid.UUID    `json:"rule_id"`
+	EventID     uuid.UUID    `json:"event_id"`
+	TriggeredAt sql.NullTime `json:"triggered_at"`
+	Notified    sql.NullBool `json:"notified"`
+}
+
+type Event struct {
+	ID         uuid.UUID       `json:"id"`
+	TenantID   uuid.UUID       `json:"tenant_id"`
+	WebhookID  uuid.UUID       `json:"webhook_id"`
+	Source     string          `json:"source"`
+	EventType  string          `json:"event_type"`
+	Action     sql.NullString  `json:"action"`
+	RawPayload json.RawMessage `json:"raw_payload"`
+	DedupHash  sql.NullString  `json:"dedup_hash"`
+	ReceivedAt sql.NullTime    `json:"received_at"`
+}
+
+type EventProcessingQueue struct {
+	ID          int32          `json:"id"`
+	EventID     uuid.UUID      `json:"event_id"`
+	Status      string         `json:"status"`
+	LockedAt    sql.NullTime   `json:"locked_at"`
+	LockedBy    sql.NullString `json:"locked_by"`
+	ProcessedAt sql.NullTime   `json:"processed_at"`
+	Error       sql.NullString `json:"error"`
 }
 
 type NotificationChannel struct {
@@ -41,6 +63,7 @@ type Rule struct {
 	EvalType    string         `json:"eval_type"`
 	AlertLevel  string         `json:"alert_level"`
 	CreatedAt   time.Time      `json:"created_at"`
+	Active      bool           `json:"active"`
 }
 
 type RuleDestination struct {
