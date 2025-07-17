@@ -24,3 +24,7 @@ sqlc-generate:
 .PHONY: test
 test:
 	go test -v ./...
+
+.PHONY: test-macos
+test-macos:
+	./scripts/test.sh

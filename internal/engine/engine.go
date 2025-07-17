@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/apache/arrow-adbc/go/adbc"
+	"github.com/google/uuid"
+	"github.com/turbolytics/sqlsec/internal/db/queries/alerts"
 	"github.com/turbolytics/sqlsec/internal/db/queries/events"
 	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"github.com/turbolytics/sqlsec/internal/engine/sandbox"
@@ -16,6 +18,7 @@ import (
 type Engine struct {
 	conn adbc.Connection
 
+	alertQueries alerts.Querier
 	eventQueries events.Querier
 	ruleQueries  rules.Querier
 	logger       *zap.Logger
@@ -159,8 +162,16 @@ func (e *Engine) fetchRulesForEvent(ctx context.Context, event *events.Event) ([
 
 // saveAlert saves an alert to the alerts table if a rule is triggered.
 func (e *Engine) saveAlert(ctx context.Context, rule rules.Rule, event *events.Event) error {
-	// TODO: Implement saving alert to alerts table
-	return nil
+	alertID := uuid.New()
+	triggeredAt := sql.NullTime{Time: time.Now().UTC(), Valid: true}
+	_, err := e.alertQueries.CreateAlert(ctx, alerts.CreateAlertParams{
+		ID:          alertID,
+		TenantID:    event.TenantID,
+		RuleID:      rule.ID,
+		EventID:     event.ID,
+		TriggeredAt: triggeredAt,
+	})
+	return err
 }
 
 /*

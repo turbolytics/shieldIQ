@@ -13,12 +13,12 @@ import (
 )
 
 type Alert struct {
-	ID          uuid.UUID       `json:"id"`
-	TenantID    uuid.UUID       `json:"tenant_id"`
-	RuleID      uuid.NullUUID   `json:"rule_id"`
-	Event       json.RawMessage `json:"event"`
-	TriggeredAt sql.NullTime    `json:"triggered_at"`
-	Notified    sql.NullBool    `json:"notified"`
+	ID          uuid.UUID    `json:"id"`
+	TenantID    uuid.UUID    `json:"tenant_id"`
+	RuleID      uuid.UUID    `json:"rule_id"`
+	EventID     uuid.UUID    `json:"event_id"`
+	TriggeredAt sql.NullTime `json:"triggered_at"`
+	Notified    sql.NullBool `json:"notified"`
 }
 
 type Event struct {

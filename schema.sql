@@ -65,45 +65,46 @@ CREATE TABLE rule_destinations
     PRIMARY KEY (rule_id, channel_id)
 );
 
+-- Ingested Events (raw and parsed)
+CREATE TABLE events
+(
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id   UUID  NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
+    webhook_id  UUID  NOT NULL REFERENCES webhooks (id) ON DELETE CASCADE,
+
+    -- Metadata for routing/evaluation
+    source      TEXT  NOT NULL, -- e.g. 'github'
+    event_type  TEXT  NOT NULL, -- e.g. 'pull_request'
+    action      TEXT,           -- e.g. 'opened', 'closed' (nullable for flexibility)
+
+    -- Actual event payload
+    raw_payload JSONB NOT NULL,
+
+    -- Optional: deduplication or trace
+    dedup_hash  TEXT UNIQUE,    -- SHA256 hash of raw_payload, optional
+    received_at TIMESTAMPTZ      DEFAULT now()
+);
+
 -- Alerts: when a rule is triggered on a specific event
 CREATE TABLE alerts
 (
     id           UUID PRIMARY KEY,
-    tenant_id    UUID  NOT NULL,
-    rule_id      UUID REFERENCES rules (id),
-    event        JSONB NOT NULL,
+    tenant_id    UUID NOT NULL,
+    rule_id      UUID NOT NULL REFERENCES rules (id),
+    event_id     UUID NOT NULL REFERENCES events (id) ON DELETE CASCADE,
     triggered_at TIMESTAMP DEFAULT now(),
     notified     BOOLEAN   DEFAULT FALSE
 );
 
--- Ingested Events (raw and parsed)
-CREATE TABLE events
-(
-    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id    UUID  NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
-    webhook_id   UUID  NOT NULL REFERENCES webhooks (id) ON DELETE CASCADE,
-
-    -- Metadata for routing/evaluation
-    source       TEXT  NOT NULL, -- e.g. 'github'
-    event_type   TEXT  NOT NULL, -- e.g. 'pull_request'
-    action       TEXT,           -- e.g. 'opened', 'closed' (nullable for flexibility)
-
-    -- Actual event payload
-    raw_payload  JSONB NOT NULL,
-
-    -- Optional: deduplication or trace
-    dedup_hash   TEXT UNIQUE,    -- SHA256 hash of raw_payload, optional
-    received_at  TIMESTAMPTZ      DEFAULT now()
-);
-
 -- Indexes for fast rule lookup
 
-CREATE TABLE event_processing_queue (
-    id SERIAL PRIMARY KEY,
-    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'done', 'failed')),
-    locked_at TIMESTAMPTZ,
-    locked_by TEXT,
+CREATE TABLE event_processing_queue
+(
+    id           SERIAL PRIMARY KEY,
+    event_id     UUID NOT NULL REFERENCES events (id) ON DELETE CASCADE,
+    status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'done', 'failed')),
+    locked_at    TIMESTAMPTZ,
+    locked_by    TEXT,
     processed_at TIMESTAMPTZ,
-    error TEXT
+    error        TEXT
 );
