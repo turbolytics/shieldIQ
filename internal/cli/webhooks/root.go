@@ -1,4 +1,4 @@
-package webhook
+package webhooks
 
 import (
 	"github.com/spf13/cobra"
@@ -6,7 +6,7 @@ import (
 
 func NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "webhook",
+		Use:   "webhooks",
 		Short: "Manage webhooks",
 	}
 
