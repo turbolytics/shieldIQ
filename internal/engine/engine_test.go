@@ -21,6 +21,18 @@ func (m *mockAlertsQuerier) CreateAlert(ctx context.Context, arg alerts.CreateAl
 	m.called = true
 	return alerts.CreateAlertRow{}, nil
 }
+func (m *mockAlertsQuerier) FetchNextAlertForProcessing(ctx context.Context, lockedBy sql.NullString) (uuid.UUID, error) {
+	return uuid.New(), nil
+}
+func (m *mockAlertsQuerier) InsertAlertProcessingQueue(ctx context.Context, alertID uuid.UUID) (alerts.AlertProcessingQueue, error) {
+	return alerts.AlertProcessingQueue{}, nil
+}
+func (m *mockAlertsQuerier) MarkAlertProcessingDelivered(ctx context.Context, alertID uuid.UUID) error {
+	return nil
+}
+func (m *mockAlertsQuerier) MarkAlertProcessingFailed(ctx context.Context, arg alerts.MarkAlertProcessingFailedParams) error {
+	return nil
+}
 
 // alerts.Querier only has CreateAlert
 
@@ -93,12 +105,26 @@ func (m *mockRulesQuerier) UpdateRuleActive(ctx context.Context, arg rules.Updat
 	panic("not implemented")
 }
 
+// --- mockAlerter for Alerter interface ---
+type mockAlerter struct {
+	called        bool
+	receivedRule  rules.Rule
+	receivedEvent *events.Event
+}
+
+func (m *mockAlerter) CreateAlert(ctx context.Context, rule rules.Rule, event *events.Event) error {
+	m.called = true
+	m.receivedRule = rule
+	m.receivedEvent = event
+	return nil
+}
+
 func TestEngine_ExecuteOnce_HappyPath(t *testing.T) {
 	ctx := context.Background()
 	logger := zap.NewNop()
-	alertsQ := &mockAlertsQuerier{}
+	alerter := &mockAlerter{}
 	engine := &Engine{
-		alertQueries: alertsQ,
+		alerter:      alerter,
 		eventQueries: &mockEventsQuerier{},
 		ruleQueries:  &mockRulesQuerier{},
 		logger:       logger,
@@ -108,7 +134,13 @@ func TestEngine_ExecuteOnce_HappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !alertsQ.called {
-		t.Error("expected alert to be created, but CreateAlert was not called")
+	if !alerter.called {
+		t.Error("expected CreateAlert to be called, but it was not")
+	}
+	if alerter.receivedRule.Name != "test_rule" {
+		t.Errorf("expected rule name 'test_rule', got '%s'", alerter.receivedRule.Name)
+	}
+	if alerter.receivedEvent == nil || alerter.receivedEvent.EventType != "test_event" {
+		t.Errorf("expected event type 'test_event', got '%v'", alerter.receivedEvent)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/apache/arrow-adbc/go/adbc/drivermgr"
+	"github.com/turbolytics/sqlsec/internal/db/queries/alerts"
 	"github.com/turbolytics/sqlsec/internal/db/queries/events"
 	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"go.uber.org/zap"
@@ -70,10 +71,13 @@ func newRunCmd(dsn *string) *cobra.Command {
 			defer dbConn.Close()
 			eventQueries := events.New(dbConn)
 			ruleQueries := rules.New(dbConn)
+			alertQ := alerts.New(dbConn)
+			alerter := enginepkg.NewPostgresAlerter(dbConn, alertQ, logger)
 			engine := enginepkg.New(
 				conn,
 				eventQueries,
 				ruleQueries,
+				alerter,
 				logger,
 			)
 			logger.Info("Starting engine daemon...")

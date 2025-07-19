@@ -53,3 +53,74 @@ func (q *Queries) CreateAlert(ctx context.Context, arg CreateAlertParams) (Creat
 	)
 	return i, err
 }
+
+const fetchNextAlertForProcessing = `-- name: FetchNextAlertForProcessing :one
+UPDATE alert_processing_queue
+SET status = 'processing',
+    locked_at = now(),
+    locked_by = $1
+WHERE id = (
+    SELECT id
+    FROM alert_processing_queue
+    WHERE status = 'pending'
+    ORDER BY id
+    FOR UPDATE SKIP LOCKED
+    LIMIT 1
+)
+RETURNING alert_id
+`
+
+func (q *Queries) FetchNextAlertForProcessing(ctx context.Context, lockedBy sql.NullString) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, fetchNextAlertForProcessing, lockedBy)
+	var alert_id uuid.UUID
+	err := row.Scan(&alert_id)
+	return alert_id, err
+}
+
+const insertAlertProcessingQueue = `-- name: InsertAlertProcessingQueue :one
+INSERT INTO alert_processing_queue (alert_id)
+VALUES ($1)
+RETURNING id, alert_id, status, locked_at, locked_by, processed_at, error
+`
+
+func (q *Queries) InsertAlertProcessingQueue(ctx context.Context, alertID uuid.UUID) (AlertProcessingQueue, error) {
+	row := q.db.QueryRowContext(ctx, insertAlertProcessingQueue, alertID)
+	var i AlertProcessingQueue
+	err := row.Scan(
+		&i.ID,
+		&i.AlertID,
+		&i.Status,
+		&i.LockedAt,
+		&i.LockedBy,
+		&i.ProcessedAt,
+		&i.Error,
+	)
+	return i, err
+}
+
+const markAlertProcessingDelivered = `-- name: MarkAlertProcessingDelivered :exec
+UPDATE alert_processing_queue
+SET status = 'delivered', processed_at = now()
+WHERE alert_id = $1
+`
+
+func (q *Queries) MarkAlertProcessingDelivered(ctx context.Context, alertID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, markAlertProcessingDelivered, alertID)
+	return err
+}
+
+const markAlertProcessingFailed = `-- name: MarkAlertProcessingFailed :exec
+UPDATE alert_processing_queue
+SET status = 'failed', error = $2, processed_at = now()
+WHERE alert_id = $1
+`
+
+type MarkAlertProcessingFailedParams struct {
+	AlertID uuid.UUID      `json:"alert_id"`
+	Error   sql.NullString `json:"error"`
+}
+
+func (q *Queries) MarkAlertProcessingFailed(ctx context.Context, arg MarkAlertProcessingFailedParams) error {
+	_, err := q.db.ExecContext(ctx, markAlertProcessingFailed, arg.AlertID, arg.Error)
+	return err
+}
