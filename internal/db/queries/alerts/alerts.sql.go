@@ -77,6 +77,48 @@ func (q *Queries) FetchNextAlertForProcessing(ctx context.Context, lockedBy sql.
 	return alert_id, err
 }
 
+const getAlertByID = `-- name: GetAlertByID :one
+SELECT id, tenant_id, rule_id, event_id, triggered_at, notified
+FROM alerts
+WHERE id = $1
+`
+
+func (q *Queries) GetAlertByID(ctx context.Context, id uuid.UUID) (Alert, error) {
+	row := q.db.QueryRowContext(ctx, getAlertByID, id)
+	var i Alert
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.RuleID,
+		&i.EventID,
+		&i.TriggeredAt,
+		&i.Notified,
+	)
+	return i, err
+}
+
+const insertAlertDelivery = `-- name: InsertAlertDelivery :exec
+INSERT INTO alert_deliveries (alert_id, channel_id, status, error)
+VALUES ($1, $2, $3, $4)
+`
+
+type InsertAlertDeliveryParams struct {
+	AlertID   uuid.UUID      `json:"alert_id"`
+	ChannelID uuid.UUID      `json:"channel_id"`
+	Status    string         `json:"status"`
+	Error     sql.NullString `json:"error"`
+}
+
+func (q *Queries) InsertAlertDelivery(ctx context.Context, arg InsertAlertDeliveryParams) error {
+	_, err := q.db.ExecContext(ctx, insertAlertDelivery,
+		arg.AlertID,
+		arg.ChannelID,
+		arg.Status,
+		arg.Error,
+	)
+	return err
+}
+
 const insertAlertProcessingQueue = `-- name: InsertAlertProcessingQueue :one
 INSERT INTO alert_processing_queue (alert_id)
 VALUES ($1)
@@ -96,6 +138,17 @@ func (q *Queries) InsertAlertProcessingQueue(ctx context.Context, alertID uuid.U
 		&i.Error,
 	)
 	return i, err
+}
+
+const markAlertNotified = `-- name: MarkAlertNotified :exec
+UPDATE alerts
+SET notified = TRUE
+WHERE id = $1
+`
+
+func (q *Queries) MarkAlertNotified(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, markAlertNotified, id)
+	return err
 }
 
 const markAlertProcessingDelivered = `-- name: MarkAlertProcessingDelivered :exec

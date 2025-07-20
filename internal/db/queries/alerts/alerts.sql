@@ -33,3 +33,17 @@ WHERE alert_id = $1;
 UPDATE alert_processing_queue
 SET status = 'delivered', processed_at = now()
 WHERE alert_id = $1;
+
+-- name: GetAlertByID :one
+SELECT id, tenant_id, rule_id, event_id, triggered_at, notified
+FROM alerts
+WHERE id = $1;
+
+-- name: InsertAlertDelivery :exec
+INSERT INTO alert_deliveries (alert_id, channel_id, status, error)
+VALUES ($1, $2, $3, $4);
+
+-- name: MarkAlertNotified :exec
+UPDATE alerts
+SET notified = TRUE
+WHERE id = $1;

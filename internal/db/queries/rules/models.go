@@ -21,6 +21,14 @@ type Alert struct {
 	Notified    sql.NullBool `json:"notified"`
 }
 
+type AlertDelivery struct {
+	AlertID   uuid.UUID      `json:"alert_id"`
+	ChannelID uuid.UUID      `json:"channel_id"`
+	Status    string         `json:"status"`
+	AttemptAt sql.NullTime   `json:"attempt_at"`
+	Error     sql.NullString `json:"error"`
+}
+
 type AlertProcessingQueue struct {
 	ID          uuid.UUID      `json:"id"`
 	AlertID     uuid.UUID      `json:"alert_id"`
