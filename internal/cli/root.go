@@ -4,9 +4,10 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/turbolytics/sqlsec/internal/cli/alerter"
+	"github.com/turbolytics/sqlsec/internal/cli/api"
+	"github.com/turbolytics/sqlsec/internal/cli/api/webhooks"
 	"github.com/turbolytics/sqlsec/internal/cli/engine"
 	"github.com/turbolytics/sqlsec/internal/cli/serve"
-	"github.com/turbolytics/sqlsec/internal/cli/webhooks"
 	"log"
 )
 
@@ -36,6 +37,7 @@ func NewRootCommand() *cobra.Command {
 	rootCmd.AddCommand(serve.NewCommand())
 	rootCmd.AddCommand(engine.NewCmd())
 	rootCmd.AddCommand(alerter.NewAlerterCmd())
+	rootCmd.AddCommand(api.NewCommand())
 
 	return rootCmd
 }

@@ -15,6 +15,9 @@ import (
 const createNotificationChannel = `-- name: CreateNotificationChannel :one
 INSERT INTO notification_channels (id, tenant_id, name, type, config)
 VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (tenant_id, name) DO UPDATE
+SET tenant_id = notification_channels.tenant_id,
+    name = notification_channels.name
 RETURNING id, tenant_id, name, type, config, created_at
 `
 
@@ -69,7 +72,8 @@ func (q *Queries) GetNotificationChannelByID(ctx context.Context, id uuid.UUID) 
 const getNotificationChannelByTenantAndName = `-- name: GetNotificationChannelByTenantAndName :one
 SELECT id, tenant_id, name, type, config, created_at
 FROM notification_channels
-WHERE tenant_id = $1 AND name = $2
+WHERE tenant_id = $1
+  AND name = $2
 `
 
 type GetNotificationChannelByTenantAndNameParams struct {
