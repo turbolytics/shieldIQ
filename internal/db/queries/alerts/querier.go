@@ -6,10 +6,20 @@ package alerts
 
 import (
 	"context"
+	"database/sql"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
 	CreateAlert(ctx context.Context, arg CreateAlertParams) (CreateAlertRow, error)
+	FetchNextAlertForProcessing(ctx context.Context, lockedBy sql.NullString) (uuid.UUID, error)
+	GetAlertByID(ctx context.Context, id uuid.UUID) (Alert, error)
+	InsertAlertDelivery(ctx context.Context, arg InsertAlertDeliveryParams) error
+	InsertAlertProcessingQueue(ctx context.Context, alertID uuid.UUID) (AlertProcessingQueue, error)
+	MarkAlertNotified(ctx context.Context, id uuid.UUID) error
+	MarkAlertProcessingDelivered(ctx context.Context, alertID uuid.UUID) error
+	MarkAlertProcessingFailed(ctx context.Context, arg MarkAlertProcessingFailedParams) error
 }
 
 var _ Querier = (*Queries)(nil)

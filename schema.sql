@@ -108,3 +108,28 @@ CREATE TABLE event_processing_queue
     processed_at TIMESTAMPTZ,
     error        TEXT
 );
+
+-- Alert Processing Queue: same pattern as event_processing_queue
+CREATE TABLE alert_processing_queue
+(
+    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    alert_id     UUID NOT NULL REFERENCES alerts (id),
+    status       TEXT NOT NULL    DEFAULT 'pending',
+    locked_at    TIMESTAMPTZ,
+    locked_by    TEXT,
+    processed_at TIMESTAMPTZ,
+    error        TEXT
+);
+
+CREATE INDEX alert_processing_queue_status_idx ON alert_processing_queue (status);
+CREATE INDEX alert_processing_queue_alert_id_idx ON alert_processing_queue (alert_id);
+
+CREATE TABLE alert_deliveries
+(
+    alert_id   UUID NOT NULL REFERENCES alerts (id) ON DELETE CASCADE,
+    channel_id UUID NOT NULL REFERENCES notification_channels (id) ON DELETE CASCADE,
+    status     TEXT NOT NULL CHECK (status IN ('pending', 'delivered', 'failed')),
+    attempt_at TIMESTAMPTZ DEFAULT now(),
+    error      TEXT,
+    PRIMARY KEY (alert_id, channel_id)
+);

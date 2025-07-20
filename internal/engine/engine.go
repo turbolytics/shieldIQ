@@ -14,18 +14,78 @@ import (
 	"time"
 )
 
+type Alerter interface {
+	CreateAlert(ctx context.Context, rule rules.Rule, event *events.Event) error
+}
+
+type PostgresAlerter struct {
+	db     *sql.DB
+	alertQ *alerts.Queries
+	logger *zap.Logger
+}
+
+func NewPostgresAlerter(db *sql.DB, alertQ *alerts.Queries, logger *zap.Logger) *PostgresAlerter {
+	return &PostgresAlerter{
+		db:     db,
+		alertQ: alertQ,
+		logger: logger,
+	}
+}
+
+func (p *PostgresAlerter) CreateAlert(ctx context.Context, rule rules.Rule, event *events.Event) error {
+	alertID := uuid.New()
+	triggeredAt := sql.NullTime{Time: time.Now().UTC(), Valid: true}
+
+	tx, err := p.db.BeginTx(ctx, nil)
+	if err != nil {
+		p.logger.Error("Failed to begin transaction for alert creation", zap.Error(err))
+		return err
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			_ = tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
+
+	aq := p.alertQ.WithTx(tx) // Now valid
+	_, err = aq.CreateAlert(ctx, alerts.CreateAlertParams{
+		ID:          alertID,
+		TenantID:    event.TenantID,
+		RuleID:      rule.ID,
+		EventID:     event.ID,
+		TriggeredAt: triggeredAt,
+	})
+	if err != nil {
+		p.logger.Error("CreateAlert failed", zap.Error(err))
+		return err
+	}
+	_, err = aq.InsertAlertProcessingQueue(ctx, alertID)
+	if err != nil {
+		p.logger.Error("InsertAlertProcessingQueue failed", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
 // Engine is responsible for processing events and evaluating rules.
 type Engine struct {
-	conn adbc.Connection
+	alerter Alerter
+	conn    adbc.Connection
 
-	alertQueries alerts.Querier
 	eventQueries events.Querier
 	ruleQueries  rules.Querier
 	logger       *zap.Logger
 }
 
-func New(conn adbc.Connection, eventQueries *events.Queries, ruleQueries *rules.Queries, l *zap.Logger) *Engine {
+func New(conn adbc.Connection, eventQueries events.Querier, ruleQueries rules.Querier, alerter Alerter, l *zap.Logger) *Engine {
 	return &Engine{
+		alerter:      alerter,
 		conn:         conn,
 		eventQueries: eventQueries,
 		ruleQueries:  ruleQueries,
@@ -33,7 +93,7 @@ func New(conn adbc.Connection, eventQueries *events.Queries, ruleQueries *rules.
 	}
 }
 
-// ExecuteOnce is the main execution entrypoint for a single engine loop.
+// ExecuteOnce is the main execu/tion entrypoint for a single engine loop.
 func (e *Engine) ExecuteOnce(ctx context.Context) error {
 	// 1. Fetch an event to process (from event_processing_queue)
 	event, err := e.fetchNextEvent(ctx)
@@ -98,7 +158,7 @@ func (e *Engine) ExecuteOnce(ctx context.Context) error {
 		}
 		// 4. Any rule execution that returns > 0 result should be saved to alerts table
 		if n > 0 {
-			if err := e.saveAlert(ctx, rule, event); err != nil {
+			if err := e.alerter.CreateAlert(ctx, rule, event); err != nil {
 				e.logger.Error("Failed to save alert",
 					zap.String("event_id", event.ID.String()),
 					zap.String("rule_id", rule.ID.String()),
@@ -159,21 +219,3 @@ func (e *Engine) fetchRulesForEvent(ctx context.Context, event *events.Event) ([
 		EventType: event.EventType,
 	})
 }
-
-// saveAlert saves an alert to the alerts table if a rule is triggered.
-func (e *Engine) saveAlert(ctx context.Context, rule rules.Rule, event *events.Event) error {
-	alertID := uuid.New()
-	triggeredAt := sql.NullTime{Time: time.Now().UTC(), Valid: true}
-	_, err := e.alertQueries.CreateAlert(ctx, alerts.CreateAlertParams{
-		ID:          alertID,
-		TenantID:    event.TenantID,
-		RuleID:      rule.ID,
-		EventID:     event.ID,
-		TriggeredAt: triggeredAt,
-	})
-	return err
-}
-
-/*
-The engine is the rules engine, responsible for processing events and evaluating rules.
-*/
