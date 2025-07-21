@@ -8,17 +8,21 @@ import (
 	"github.com/turbolytics/sqlsec/internal"
 	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"github.com/turbolytics/sqlsec/internal/source"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"time"
 )
 
 type RuleHandlers struct {
+	logger *zap.Logger
+
 	ruleQueries *rules.Queries
 }
 
-func NewRuleHandlers(ruleQueries *rules.Queries) *RuleHandlers {
+func NewRuleHandlers(l *zap.Logger, ruleQueries *rules.Queries) *RuleHandlers {
 	return &RuleHandlers{
+		logger:      l,
 		ruleQueries: ruleQueries,
 	}
 }
@@ -86,6 +90,7 @@ func (h *RuleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		Active:      active,
 	})
 	if err != nil {
+		h.logger.Error("failed to create rule", zap.Error(err))
 		http.Error(w, "failed to create rule", http.StatusInternalServerError)
 		return
 	}

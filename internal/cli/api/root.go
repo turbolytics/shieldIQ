@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/turbolytics/sqlsec/internal/cli/api/notificationchannels"
+	"github.com/turbolytics/sqlsec/internal/cli/api/rules"
 	"github.com/turbolytics/sqlsec/internal/cli/api/webhooks"
 	"os"
 )
@@ -28,6 +29,7 @@ func NewCommand() *cobra.Command {
 
 	cmd.AddCommand(webhooks.NewCommand())
 	cmd.AddCommand(notificationchannels.NewCommand())
+	cmd.AddCommand(rules.NewCommand())
 
 	return cmd
 }
