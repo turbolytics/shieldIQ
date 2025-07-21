@@ -8,15 +8,18 @@ import (
 	"github.com/turbolytics/sqlsec/internal/db/queries/notificationchannels"
 	"github.com/turbolytics/sqlsec/internal/notify"
 	_ "github.com/turbolytics/sqlsec/internal/notify/slack"
+	"go.uber.org/zap"
 	"net/http"
 )
 
 type NotificationHandlers struct {
+	logger    *zap.Logger
 	ncQueries *notificationchannels.Queries
 }
 
-func NewNotificationHandlers(ncQueries *notificationchannels.Queries) *NotificationHandlers {
+func NewNotificationHandlers(l *zap.Logger, ncQueries *notificationchannels.Queries) *NotificationHandlers {
 	return &NotificationHandlers{
+		logger:    l,
 		ncQueries: ncQueries,
 	}
 }
@@ -53,6 +56,7 @@ func (h *NotificationHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		Config:   configJSON,
 	})
 	if err != nil {
+		h.logger.Error("failed to create notification channel", zap.Error(err))
 		http.Error(w, "failed to create", http.StatusInternalServerError)
 		return
 	}

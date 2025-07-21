@@ -50,7 +50,7 @@ func NewCommand() *cobra.Command {
 				webhookQueries,
 				logger,
 			)
-			nh := handlers.NewNotificationHandlers(ncQueries)
+			nh := handlers.NewNotificationHandlers(logger, ncQueries)
 			rh := handlers.NewRuleHandlers(ruleQueries)
 			dh := handlers.NewDestinationHandlers(ruleQueries, ncQueries)
 			router := chi.NewRouter()
