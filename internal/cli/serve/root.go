@@ -51,7 +51,7 @@ func NewCommand() *cobra.Command {
 				logger,
 			)
 			nh := handlers.NewNotificationHandlers(logger, ncQueries)
-			rh := handlers.NewRuleHandlers(ruleQueries)
+			rh := handlers.NewRuleHandlers(logger, ruleQueries)
 			dh := handlers.NewDestinationHandlers(ruleQueries, ncQueries)
 			router := chi.NewRouter()
 			server.RegisterRoutes(router, wh, nh, rh, dh, logger)

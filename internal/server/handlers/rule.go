@@ -6,19 +6,25 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/turbolytics/sqlsec/internal"
+	"github.com/turbolytics/sqlsec/internal/db/queries/events"
 	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
+	"github.com/turbolytics/sqlsec/internal/engine/sandbox"
 	"github.com/turbolytics/sqlsec/internal/source"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"time"
 )
 
 type RuleHandlers struct {
+	logger *zap.Logger
+
 	ruleQueries *rules.Queries
 }
 
-func NewRuleHandlers(ruleQueries *rules.Queries) *RuleHandlers {
+func NewRuleHandlers(l *zap.Logger, ruleQueries *rules.Queries) *RuleHandlers {
 	return &RuleHandlers{
+		logger:      l,
 		ruleQueries: ruleQueries,
 	}
 }
@@ -86,6 +92,7 @@ func (h *RuleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		Active:      active,
 	})
 	if err != nil {
+		h.logger.Error("failed to create rule", zap.Error(err))
 		http.Error(w, "failed to create rule", http.StatusInternalServerError)
 		return
 	}
@@ -170,7 +177,7 @@ func (h *RuleHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RuleHandlers) Test(w http.ResponseWriter, r *http.Request) {
-	panic("not implemented") // TODO: Implement this
+	ctx := r.Context()
 	idStr := chi.URLParam(r, "id")
 	_, err := uuid.Parse(idStr)
 	if err != nil {
@@ -182,11 +189,66 @@ func (h *RuleHandlers) Test(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
+
+	rule, err := h.ruleQueries.GetRuleByID(ctx, rules.GetRuleByIDParams{
+		ID: uuid.MustParse(idStr),
+	})
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "rule not found", http.StatusNotFound)
+			return
+		}
+		h.logger.Error("failed to get rule by ID", zap.Error(err))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	box, err := sandbox.New(
+		ctx,
+		sandbox.WithLogger(h.logger),
+		sandbox.WithDuckDBMemoryConnection(),
+	)
+
+	if err != nil {
+		h.logger.Error("failed to create sandbox", zap.Error(err))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	b, err := json.Marshal(req.Event)
+	if err != nil {
+		h.logger.Error("failed to marshal event", zap.Error(err))
+		http.Error(w, "invalid event format", http.StatusBadRequest)
+		return
+	}
+
+	testEvent := &events.Event{
+		RawPayload: b,
+	}
+
+	if err = box.AddEvent(ctx, testEvent); err != nil {
+		h.logger.Error("failed to add event to sandbox", zap.Error(err))
+		http.Error(w, "failed to add event", http.StatusInternalServerError)
+		return
+	}
+
+	i, err := box.ExecuteRule(ctx, rule)
+	if err != nil {
+		h.logger.Error("failed to execute rule in sandbox", zap.Error(err))
+		http.Error(w, "failed to execute rule", http.StatusInternalServerError)
+		return
+	}
+
 	// TODO: fetch rule, evaluate condition, return result
 	resp := TestRuleResponse{
-		Match:      true,
-		AlertLevel: "MEDIUM",
-		Details:    map[string]interface{}{"info": "stubbed"},
+		Match:      i > 0,
+		AlertLevel: rule.AlertLevel,
+		Details: map[string]any{
+			"rule_id":   rule.ID.String(),
+			"rule_name": rule.Name,
+			"sql":       rule.Sql,
+			"event":     testEvent,
+		},
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)

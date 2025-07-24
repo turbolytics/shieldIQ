@@ -68,7 +68,7 @@ SQLSEC_DB_DSN=postgres://sqlsec:sqlsec@localhost:5432/sqlsec?sslmode=disable go 
 
 ```
 docker exec -it sqlsec_postgres psql -U sqlsec
-``
+```
 
 - Install Duckdb
 ```
@@ -81,4 +81,10 @@ DYLD_LIBRARY_PATH=/opt/homebrew/lib make test
 export DYLD_LIBRARY_PATH=/opt/homebrew/lib:$DYLD_LIBRARY_PATH
 SQLSEC_DB_DSN=postgres://sqlsec:sqlsec@localhost:5432/sqlsec?sslmode=disable go run cmd/sqlsec/main.go engine run
 2025-07-16T18:41:27.217-0400    INFO    engine/root.go:79       Starting engine daemon...
+```
+
+- Start the Alerter Daemon
+
+```
+SQLSEC_DB_DSN=postgres://sqlsec:sqlsec@localhost:5432/sqlsec?sslmode=disable go run cmd/sqlsec/main.go alerter run
 ```
