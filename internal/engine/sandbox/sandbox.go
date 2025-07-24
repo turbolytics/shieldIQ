@@ -18,7 +18,6 @@ func arrowRecordFromEvent(event *events.Event) arrow.Record {
 
 	schema := arrow.NewSchema([]arrow.Field{
 		{Name: "id", Type: arrow.BinaryTypes.String},
-		{Name: "tenant_id", Type: arrow.BinaryTypes.String},
 		{Name: "webhook_id", Type: arrow.BinaryTypes.String},
 		{Name: "source", Type: arrow.BinaryTypes.String},
 		{Name: "event_type", Type: arrow.BinaryTypes.String},
@@ -34,14 +33,13 @@ func arrowRecordFromEvent(event *events.Event) arrow.Record {
 	payload, _ := event.RawPayload.MarshalJSON()
 
 	b.Field(0).(*array.StringBuilder).Append(event.ID.String())
-	b.Field(1).(*array.StringBuilder).Append(event.TenantID.String())
-	b.Field(2).(*array.StringBuilder).Append(event.WebhookID.String())
-	b.Field(3).(*array.StringBuilder).Append(event.Source)
-	b.Field(4).(*array.StringBuilder).Append(event.EventType)
-	b.Field(5).(*array.StringBuilder).Append(event.Action.String)
-	b.Field(6).(*array.StringBuilder).Append(string(payload))
-	b.Field(7).(*array.StringBuilder).Append(event.DedupHash.String)
-	b.Field(8).(*array.TimestampBuilder).Append(arrow.Timestamp(event.ReceivedAt.Time.UnixMilli()))
+	b.Field(1).(*array.StringBuilder).Append(event.WebhookID.String())
+	b.Field(2).(*array.StringBuilder).Append(event.Source)
+	b.Field(3).(*array.StringBuilder).Append(event.EventType)
+	b.Field(4).(*array.StringBuilder).Append(event.Action.String)
+	b.Field(5).(*array.StringBuilder).Append(string(payload))
+	b.Field(6).(*array.StringBuilder).Append(event.DedupHash.String)
+	b.Field(7).(*array.TimestampBuilder).Append(arrow.Timestamp(event.ReceivedAt.Time.UnixMilli()))
 
 	return b.NewRecord()
 }
@@ -102,7 +100,6 @@ func (s *Sandbox) InitTables(ctx context.Context) error {
 	createTableSQL := `
 	CREATE TABLE events (
 		id UUID UNIQUE NOT NULL PRIMARY KEY,
-		tenant_id UUID,
 		webhook_id UUID,
 		source TEXT,
 		event_type TEXT,
@@ -134,8 +131,10 @@ func (s *Sandbox) InitTables(ctx context.Context) error {
 
 func (s *Sandbox) AddEvent(ctx context.Context, event *events.Event) error {
 	insertSQL := `INSERT INTO events (
-		id, tenant_id, webhook_id, source, event_type, action, raw_payload, dedup_hash, received_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		id, 
+		webhook_id, 
+		source, event_type, action, raw_payload, dedup_hash, received_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
 	insertStmt, err := s.conn.NewStatement()
 	if err != nil {
