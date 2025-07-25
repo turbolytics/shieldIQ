@@ -1,17 +1,18 @@
 # Monitor GitHub
 
+## Task List
 
-- Start sqlsec
-- Create a Webhook to receive events from GitHub
+- [ ] Start sqlsec
+- [ ] Create a Slack Notification Channel
+    - [ ] Test the notification channel
+- [ ] Create a Rule to monitor GitHub events
+    - [ ] Test the rule 
+    - [ ] Set the rule notification channel
+- [ ] Create a Webhook to receive events from GitHub
+    - [ ] Register the Webhook in GitHub
 
 
-
-
-
-
-
-
-# Commands
+## Commands
 
 ### Create a Webhook
 ```
