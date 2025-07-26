@@ -23,12 +23,13 @@ jobs:
           curl -L https://github.com/duckdb/duckdb/releases/download/v1.3.2/libduckdb-linux-amd64.zip -o libduckdb.zip
           unzip libduckdb.zip
           sudo cp libduckdb.so /usr/lib/
+
       - name: Install toml++ headers
         run: |
           wget https://github.com/marzer/tomlplusplus/archive/refs/tags/v3.4.0.zip -O tomlplusplus.zip
           unzip tomlplusplus.zip
           sudo mkdir -p /usr/local/include/toml++
-          sudo cp -r tomlplusplus-3.4.0/toml++/* /usr/local/include/toml++/
+          sudo cp -r tomlplusplus-3.4.0/include/toml++/* /usr/local/include/toml++/
 
       - name: Build
         run: |
