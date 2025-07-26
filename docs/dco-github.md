@@ -4,6 +4,7 @@
 
 - [ ] Start sqlsec
 - [ ] Create a Slack Notification Channel
+    - [ ] Create a slack app with incoming webhook
     - [ ] Test the notification channel
 - [ ] Create a Rule to monitor GitHub events
     - [ ] Test the rule 
@@ -12,11 +13,37 @@
     - [ ] Register the Webhook in GitHub
 
 
-## Commands
+## Examples 
+```
+make build
+export SQLSEC_API_BASE_URL=http://localhost:8888
+```
+
+### Create a Slack Notification Channel
+```
+./bin/sqlsec api channels create --name="github-dco-1" --type="slack" --config-webhook-url=<your-slack-webhook-url>
+┌───────────┬────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Attribute │ Value                                                                                              │
+├───────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ id        │ 23ca692d-cc83-43b2-9f6a-f8d9ab11d51c                                                               │
+│ name      │ github-dco-1                                                                                       │
+│ type      │ slack                                                                                              │
+│ config    │ map[webhook_url:https://hooks.slack.com/services/                                                  │
+└───────────┴────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+Test the channel:
+
+```
+./bin/sqlsec api channels test 23ca692d-cc83-43b2-9f6a-f8d9ab11d51c
+Test successful: Test message sent
+```
+
+<img width="1089" height="126" alt="Screenshot 2025-07-26 at 6 14 04 AM" src="https://github.com/user-attachments/assets/9cd7f718-1926-4a67-ab52-a1fd14f6e705" />
 
 ### Create a Webhook
 ```
-SQLSEC_API_BASE_URL=http://localhost:8888 go run cmd/sqlsec/main.go api webhooks create --name=github-dco-1 --source=github
+./bin/sqlsec api webhooks create --name=github-dco-1 --source=github
 
 +------------+------------------------------------------------------------------+
 | Attribute  | Value                                                            |
