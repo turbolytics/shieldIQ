@@ -76,4 +76,4 @@ Register the Webhook in GitHub:
 
 Perform a test action in github to verify the Webhook
 
-### Create a Rule to monitor UnReviewed Pull Requests
+### Create a Rule to monitor Unreviewed Pull Requests
