@@ -77,3 +77,31 @@ Register the Webhook in GitHub:
 Perform a test action in github to verify the Webhook
 
 ### Create a Rule to monitor Unreviewed Pull Requests
+
+Install a pre-defined rule to monitor unreviewed pull requests:
+
+```
+./bin/sqlsec api rules install --id=github-pull-request-merged-no-reviewers
++-----------------+----------------------------------------------------------------------------------+
+| Attribute       | Value                                                                            |
++-----------------+----------------------------------------------------------------------------------+
+| description     | Detects pull requests that were merged without any reviewers                     |
+| event_source    | github                                                                           |
+| event_type      | github.pull_request                                                              |
+| sql             |                                                                                  |
+|                 | SELECT *                                                                         |
+|                 | FROM events                                                                      |
+|                 | WHERE                                                                            |
+|                 |   raw_payload->>'action' = 'closed'                                              |
+|                 |   AND (raw_payload->'pull_request'->>'merged')::boolean = true                   |
+|                 |   AND jsonb_array_length(raw_payload->'pull_request'->'assignees') = 0           |
+|                 |   AND jsonb_array_length(raw_payload->'pull_request'->'requested_reviewers') = 0 |
+|                 |   AND (raw_payload->'pull_request'->>'comments')::int = 0;                       |
+|                 |                                                                                  |
+| name            | no-reviewers                                                                     |
+| evaluation_type | LIVE_TRIGGER                                                                     |
+| created_at      | 2025-07-27T10:54:35.859512Z                                                      |
+| alert_level     | LOW                                                                              |
+| active          | false                                                                            |
+| id              | e93c8c06-a8ad-40b0-952d-9b8ced7e0095                                             |
++-----------------+----------------------------------------------------------------------------------+

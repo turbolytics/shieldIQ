@@ -15,7 +15,7 @@ var preMadeRules = map[string]internal.Rule{
 		Description:    "Detects pull requests that were merged without any reviewers",
 		EvaluationType: internal.EvaluationTypeLiveTrigger,
 		EventSource:    "github",
-		EventType:      "github.pull_request",
+		EventType:      "pull_request",
 		SQL: `
 SELECT *
 FROM events
@@ -66,24 +66,24 @@ func NewInstallCmd() *cobra.Command {
 			if !ok {
 				return fmt.Errorf("Unknown rule: %s", id)
 			}
-			// Call the create logic: reuse the create command's RunE
+			// Use doCreate and printRuleTable directly instead of cobra subcommand
 			baseURL, _ := cmd.Flags().GetString("base-url")
-			// Build args for create command instead of setting flags directly
-			argsList := []string{
-				"--name", rule.Name,
-				"--description", rule.Description,
-				"--condition", rule.SQL,
-				"--source", rule.EventSource,
-				"--event-type", rule.EventType,
-				"--evaluation-type", string(rule.EvaluationType),
-				"--alert-level", string(rule.AlertLevel),
+			ruleResp, err := doCreate(
+				baseURL,
+				rule.Name,
+				rule.Description,
+				rule.EventSource,
+				rule.EventType,
+				rule.SQL,
+				string(rule.EvaluationType),
+				string(rule.AlertLevel),
+				rule.Active,
+			)
+			if err != nil {
+				return err
 			}
-			createCmd := NewCreateCmd()
-			createCmd.SetArgs(argsList)
-			if baseURL != "" {
-				createCmd.Flags().Set("base-url", baseURL)
-			}
-			return createCmd.Execute()
+			printRuleTable(cmd, ruleResp)
+			return nil
 		},
 	}
 	cmd.Flags().String("id", "", "Id of the pre-made rule")

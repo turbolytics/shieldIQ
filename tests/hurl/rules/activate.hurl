@@ -3,7 +3,7 @@ POST http://localhost:8888/api/rules
 Content-Type: application/json
 
 {
-  "name": "Test Active Rule",
+  "name": "{{newUuid}}",
   "description": "A rule to test active flag",
   "source": "github",
   "event_type": "pull_request",
