@@ -105,3 +105,5 @@ Install a pre-defined rule to monitor unreviewed pull requests:
 | active          | false                                                                            |
 | id              | e93c8c06-a8ad-40b0-952d-9b8ced7e0095                                             |
 +-----------------+----------------------------------------------------------------------------------+
+
+Test the rule:

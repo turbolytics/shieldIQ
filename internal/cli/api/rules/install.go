@@ -20,11 +20,12 @@ var preMadeRules = map[string]internal.Rule{
 SELECT *
 FROM events
 WHERE
-  raw_payload->>'action' = 'closed'
-  AND (raw_payload->'pull_request'->>'merged')::boolean = true
-  AND jsonb_array_length(raw_payload->'pull_request'->'assignees') = 0
-  AND jsonb_array_length(raw_payload->'pull_request'->'requested_reviewers') = 0
-  AND (raw_payload->'pull_request'->>'comments')::int = 0;
+	raw_payload->>'action' == 'closed'
+  	AND json_extract(raw_payload, '$.pull_request.merged') == true
+  	AND json_array_length(json_extract(raw_payload, '$.pull_request.assignees')) == 0
+  	AND json_array_length(json_extract(raw_payload, '$.pull_request.requested_reviewers')) == 0
+  	AND json_extract(raw_payload, '$.pull_request.review_comments') == 0
+  	AND json_extract(raw_payload, '$.pull_request.comments') == 0;
 `,
 		AlertLevel: internal.AlertLevelLow,
 		Active:     true,
