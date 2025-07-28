@@ -1,6 +1,9 @@
 package rules
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+	"github.com/turbolytics/sqlsec/internal/cli/api/rules/destinations"
+)
 
 func NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -13,6 +16,8 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(NewGetCmd())
 	cmd.AddCommand(NewTestCmd())
 	cmd.AddCommand(NewInstallCmd())
+
+	cmd.AddCommand(destinations.NewCommand())
 
 	return cmd
 }

@@ -11,6 +11,7 @@
 - [ ] Create a Rule to monitor GitHub events
   - [ ] Test the rule 
   - [ ] Set the rule notification channel
+- [ ] Trigger and event and verify the notification
 
 ## Examples 
 ```
@@ -105,5 +106,16 @@ Install a pre-defined rule to monitor unreviewed pull requests:
 | active          | false                                                                            |
 | id              | e93c8c06-a8ad-40b0-952d-9b8ced7e0095                                             |
 +-----------------+----------------------------------------------------------------------------------+
+```
 
 Test the rule:
+
+```
+./bin/sqlsec api rules test e93c8c06-a8ad-40b0-952d-9b8ced7e0095
+```
+
+Set the rule notification channel:
+
+``` 
+./bin/sqlsec api rules destinations add <rule-id> <notification-channel-id> 
+```
