@@ -73,6 +73,7 @@ func (a *Alerter) ExecuteOnce(ctx context.Context) error {
 	for _, ch := range channels {
 		notifier, err := a.notifyReg.Get(notify.ChannelType(ch.Type))
 		if err != nil {
+			// TODO - If no notifier is found, log the error and continue to the next channel
 			a.logger.Error("No notifier for channel type", zap.String("type", ch.Type), zap.Error(err))
 			continue
 		}
@@ -83,7 +84,11 @@ func (a *Alerter) ExecuteOnce(ctx context.Context) error {
 			continue
 		}
 		// TODO: Render the alert message, include the source, and the rule SQL, and the Level
-		msg := notify.Message{Title: "Alert", Body: fmt.Sprintf("Alerted from: %d", alert.ID)} // You may want to customize this
+		msg := notify.Message{
+			Title: "Alert",
+			Body:  fmt.Sprintf("Alerted from: %d", alert.ID),
+		} // TODO - Render the alert message, include the source, and the rule SQL, and the Level
+
 		deliverErr := notifier.Send(ctx, cfg, msg)
 		status := "delivered"
 		if deliverErr != nil {
@@ -102,7 +107,8 @@ func (a *Alerter) ExecuteOnce(ctx context.Context) error {
 		}
 	}
 
-	// TODO - Should be transactional
+	// TODO - Should be transactional, only mark if all deliveries succeeded
+
 	// 5. Update alert_processing_queue status
 	err = a.alertQueries.MarkAlertProcessingDelivered(ctx, alert.ID)
 	if err != nil {
