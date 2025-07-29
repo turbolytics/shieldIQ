@@ -2,7 +2,6 @@
 
 sqlsec is a lightweight SIEM for modern SaaS
 
-
 # Quick Start
 
 ## Setup a Source
