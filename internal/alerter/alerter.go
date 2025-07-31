@@ -73,9 +73,9 @@ func (a *Alerter) ExecuteOnce(ctx context.Context) error {
 	for _, ch := range channels {
 		notifier, err := a.notifyReg.Get(notify.ChannelType(ch.Type))
 		if err != nil {
-			// TODO - If no notifier is found, log the error and continue to the next channel
-			a.logger.Error("No notifier for channel type", zap.String("type", ch.Type), zap.Error(err))
-			continue
+			// A missing notifier is a fatal error, we should not continue processing
+			a.logger.Fatal("No notifier for channel type", zap.String("type", ch.Type), zap.Error(err))
+			panic("No notifier for channel type: " + ch.Type)
 		}
 		// Parse ch.Config (json.RawMessage) into map[string]any
 		var cfg map[string]string
@@ -86,7 +86,7 @@ func (a *Alerter) ExecuteOnce(ctx context.Context) error {
 		// TODO: Render the alert message, include the source, and the rule SQL, and the Level
 		msg := notify.Message{
 			Title: "Alert",
-			Body:  fmt.Sprintf("Alerted from: %d", alert.ID),
+			Body:  fmt.Sprintf("Alerted from alert: %s", alert.ID.String()),
 		} // TODO - Render the alert message, include the source, and the rule SQL, and the Level
 
 		deliverErr := notifier.Send(ctx, cfg, msg)
@@ -100,7 +100,6 @@ func (a *Alerter) ExecuteOnce(ctx context.Context) error {
 			AlertID:   alert.ID,
 			ChannelID: ch.ID,
 			Status:    status,
-			Error:     sql.NullString{String: deliverErr.Error(), Valid: deliverErr != nil},
 		})
 		if err != nil {
 			a.logger.Error("Failed to insert alert delivery", zap.Error(err))
