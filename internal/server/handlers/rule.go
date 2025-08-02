@@ -66,7 +66,7 @@ func (h *RuleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Validate source
-	if !source.DefaultRegistry.IsEnabled(req.Source) {
+	if !source.DefaultRegistry.IsEnabled(source.Source(req.Source)) {
 		http.Error(w, "unsupported source", http.StatusBadRequest)
 		return
 	}

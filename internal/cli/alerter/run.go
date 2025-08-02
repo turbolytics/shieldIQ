@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/cobra"
 	alerterpkg "github.com/turbolytics/sqlsec/internal/alerter"
 	"github.com/turbolytics/sqlsec/internal/db/queries/alerts"
+	"github.com/turbolytics/sqlsec/internal/db/queries/events"
 	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"github.com/turbolytics/sqlsec/internal/notify"
 	"github.com/turbolytics/sqlsec/internal/notify/slack"
@@ -32,6 +33,7 @@ func NewRunCmd(dsn *string) *cobra.Command {
 
 			alertQ := alerts.New(db)
 			ruleQ := rules.New(db)
+			eventQ := events.New(db)
 			notifyReg := notify.NewRegistry()
 			slack.InitializeSlack(notifyReg)
 
@@ -40,7 +42,14 @@ func NewRunCmd(dsn *string) *cobra.Command {
 			defer logger.Sync()
 
 			logger.Info("Starting alerter service")
-			alerter := alerterpkg.NewAlerter(db, alertQ, ruleQ, notifyReg, logger)
+			alerter := alerterpkg.NewAlerter(
+				db,
+				alertQ,
+				ruleQ,
+				eventQ,
+				notifyReg,
+				logger,
+			)
 			if err := alerter.Run(ctx); err != nil {
 				cmd.PrintErrln("Alerter error:", err)
 				return

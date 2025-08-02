@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"sync"
 )
 
@@ -20,8 +21,12 @@ type Notifier interface {
 }
 
 type Message struct {
-	Title string
-	Body  string
+	Title        string
+	Body         string
+	ResourceLink url.URL
+	RuleSQL      string
+	Source       string
+	EventType    string
 }
 
 type Registry struct {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/turbolytics/sqlsec/internal/db/queries/alerts"
+	"github.com/turbolytics/sqlsec/internal/db/queries/events"
 	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"github.com/turbolytics/sqlsec/internal/notify"
 	"go.uber.org/zap"
@@ -16,14 +17,24 @@ import (
 type Alerter struct {
 	alertQueries alerts.Querier
 	ruleQueries  rules.Querier
+	eventQuerier events.Querier
 	notifyReg    *notify.Registry
 	logger       *zap.Logger
 	db           *sql.DB
 }
 
-func NewAlerter(db *sql.DB, alertQ alerts.Querier, ruleQ rules.Querier, notifyReg *notify.Registry, logger *zap.Logger) *Alerter {
+func NewAlerter(
+	db *sql.DB,
+	alertQ alerts.Querier,
+	ruleQ rules.Querier,
+	eventQ events.Querier,
+	notifyReg *notify.Registry,
+	logger *zap.Logger,
+) *Alerter {
+
 	return &Alerter{
 		alertQueries: alertQ,
+		eventQuerier: eventQ,
 		ruleQueries:  ruleQ,
 		notifyReg:    notifyReg,
 		logger:       logger,
