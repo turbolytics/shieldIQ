@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
+	"text/template"
 	"time"
 
 	"github.com/turbolytics/sqlsec/internal/notify"
@@ -25,13 +27,43 @@ func (s *SlackNotifier) Test(ctx context.Context, cfg map[string]string) error {
 	return s.Send(ctx, cfg, msg)
 }
 
+var slackMessageTemplate = "*{{.Title}}* _(Severity: {{.RuleAlertLevel | upper}})_\n\n" +
+	"{{.Body}}\n\n" +
+	">*Event Details:*\n" +
+	"• *Source:* {{.EventSource}}\n" +
+	"• *Type:* {{.EventType}}\n" +
+	"• *Resource:* <{{.ResourceLink}}|View Resource>\n\n" +
+	">*Rule Triggered:*\n" +
+	"• *Name:* {{.RuleName}}\n" +
+	"• *Description:* {{.RuleDescription}}\n" +
+	"• *Evaluation Type:* {{.RuleEvaluationType}}\n\n" +
+	">*Rule Logic (SQL):*\n" +
+	"```\n" +
+	"{{.RuleSQL}}\n" +
+	"```"
+
 func (s *SlackNotifier) Send(ctx context.Context, cfg map[string]string, msg notify.Message) error {
 	webhook, ok := cfg["webhook_url"]
 	if !ok || webhook == "" {
 		return errors.New("missing webhook_url in config")
 	}
+
+	tmpl, err := template.New("slackMessage").
+		Funcs(template.FuncMap{
+			"upper": strings.ToUpper,
+		}).
+		Parse(slackMessageTemplate)
+
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, msg); err != nil {
+		return err
+	}
+
 	payload := map[string]string{
-		"text": "*" + msg.Title + "*\n" + msg.Body,
+		"text": buf.String(),
 	}
 	b, _ := json.Marshal(payload)
 	req, err := http.NewRequestWithContext(ctx, "POST", webhook, bytes.NewBuffer(b))

@@ -10,7 +10,9 @@ import (
 	"github.com/turbolytics/sqlsec/internal/db/queries/events"
 	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"github.com/turbolytics/sqlsec/internal/notify"
+	"github.com/turbolytics/sqlsec/internal/source"
 	"go.uber.org/zap"
+	"net/url"
 	"time"
 )
 
@@ -74,6 +76,33 @@ func (a *Alerter) ExecuteOnce(ctx context.Context) error {
 		a.logger.Error("Failed to get alert by ID", zap.Error(err))
 		return err
 	}
+
+	// 2b. Get rule details
+	rule, err := a.ruleQueries.GetRuleByID(ctx, rules.GetRuleByIDParams{ID: alert.RuleID})
+	if err != nil {
+		a.logger.Error("Failed to get rule by ID", zap.Error(err))
+		return err
+	}
+
+	// 2c. Get event details
+	event, err := a.eventQuerier.GetEventByID(ctx, alert.EventID)
+	if err != nil {
+		a.logger.Error("Failed to get event by ID", zap.Error(err))
+		return err
+	}
+
+	// 2d. Parse event payload and get resource link
+	var payload map[string]any
+	if err := json.Unmarshal(event.RawPayload, &payload); err != nil {
+		a.logger.Error("Failed to parse event payload", zap.Error(err))
+	}
+	var resourceLinkStr *url.URL
+	if parser := source.DefaultRegistry.GetParser(source.Source(event.Source)); parser != nil {
+		if urlObj, err := parser.ResourceURL(payload); err == nil && urlObj != nil {
+			resourceLinkStr = urlObj
+		}
+	}
+
 	// 3. Get notification channels for the rule
 	channels, err := a.ruleQueries.ListNotificationChannelsForRule(ctx, alert.RuleID)
 	if err != nil {
@@ -94,12 +123,19 @@ func (a *Alerter) ExecuteOnce(ctx context.Context) error {
 			a.logger.Error("Failed to parse channel config", zap.Error(err))
 			continue
 		}
-		// TODO: Render the alert message, include the source, and the rule SQL, and the Level
 		msg := notify.Message{
-			Title: "Alert",
-			Body:  fmt.Sprintf("Alerted from alert: %s", alert.ID.String()),
-		} // TODO - Render the alert message, include the source, and the rule SQL, and the Level
-
+			Title:              "Alert",
+			Body:               fmt.Sprintf("Alerted from alert: %s", alert.ID.String()),
+			ResourceLink:       resourceLinkStr,
+			EventSource:        event.Source,
+			EventType:          event.EventType,
+			RuleSQL:            rule.Sql,
+			RuleID:             rule.ID.String(),
+			RuleName:           rule.Name,
+			RuleDescription:    rule.Description.String,
+			RuleEvaluationType: rule.EvalType,
+			RuleAlertLevel:     rule.AlertLevel,
+		}
 		deliverErr := notifier.Send(ctx, cfg, msg)
 		status := "delivered"
 		if deliverErr != nil {

@@ -3,7 +3,6 @@ package notify
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 	"sync"
 )
@@ -21,12 +20,17 @@ type Notifier interface {
 }
 
 type Message struct {
-	Title        string
-	Body         string
-	ResourceLink url.URL
-	RuleSQL      string
-	Source       string
-	EventType    string
+	Title              string
+	Body               string
+	ResourceLink       *url.URL
+	EventSource        string
+	EventType          string
+	RuleSQL            string
+	RuleID             string
+	RuleName           string
+	RuleDescription    string
+	RuleEvaluationType string // e.g. "LIVE_TRIGGER"
+	RuleAlertLevel     string // e.g. "LOW", "MEDIUM", "HIGH"
 }
 
 type Registry struct {
@@ -48,7 +52,6 @@ func (r *Registry) Register(t ChannelType, impl Notifier) {
 }
 
 func (r *Registry) Get(t ChannelType) (Notifier, error) {
-	fmt.Printf("here, getting notifier for type: %q from channels: %+v \n", t, r.channels)
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	impl, ok := r.channels[t]
