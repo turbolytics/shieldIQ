@@ -2,6 +2,7 @@ package source
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/turbolytics/sqlsec/internal/source/github"
 )
@@ -20,6 +21,7 @@ type Validator interface {
 type Parser interface {
 	Parse(r *http.Request) (map[string]any, error)
 	Type(r *http.Request) (string, error)
+	ResourceURL(payload map[string]any) (*url.URL, error)
 }
 
 type Registry struct {
