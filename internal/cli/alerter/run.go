@@ -3,13 +3,13 @@ package alerter
 import (
 	"database/sql"
 	"github.com/spf13/cobra"
-	alerterpkg "github.com/turbolytics/sqlsec/internal/alerter"
-	"github.com/turbolytics/sqlsec/internal/db/queries/alerts"
-	"github.com/turbolytics/sqlsec/internal/db/queries/events"
-	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
-	"github.com/turbolytics/sqlsec/internal/notify"
-	"github.com/turbolytics/sqlsec/internal/notify/slack"
-	_ "github.com/turbolytics/sqlsec/internal/notify/slack"
+	alerterpkg "github.com/turbolytics/shieldIQ/internal/alerter"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/alerts"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/events"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/rules"
+	"github.com/turbolytics/shieldIQ/internal/notify"
+	"github.com/turbolytics/shieldIQ/internal/notify/slack"
+	_ "github.com/turbolytics/shieldIQ/internal/notify/slack"
 	"go.uber.org/zap"
 	"log"
 )
@@ -22,7 +22,7 @@ func NewRunCmd(dsn *string) *cobra.Command {
 			// Initialize DB, queries, notifier registry, logger
 			ctx := cmd.Context()
 			if *dsn == "" {
-				log.Fatal("Postgres DSN must be set via --dsn or SQLSEC_DB_DSN env var")
+				log.Fatal("Postgres DSN must be set via --dsn or SHIELDIQ_DB_DSN env var")
 			}
 			db, err := sql.Open("postgres", *dsn)
 			if err != nil {

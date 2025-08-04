@@ -10,7 +10,7 @@ stop-backing-services:
 
 .PHONY: build
 build:
-	go build -o bin/sqlsec ./cmd/sqlsec
+	go build -o bin/shieldIQ ./cmd/shieldIQ
 
 .PHONY: test-hurl
 test-hurl:

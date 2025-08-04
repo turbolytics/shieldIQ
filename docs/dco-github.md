@@ -2,7 +2,7 @@
 
 ## Task List
 
-- [ ] Start sqlsec
+- [ ] Start shieldIQ
 - [ ] Create a Slack Notification Channel
   - [ ] Create a slack app with incoming webhook
   - [ ] Test the notification channel
@@ -16,17 +16,17 @@
 ## Examples 
 ```
 make build
-export SQLSEC_API_BASE_URL=http://localhost:8888
+export shieldIQ_API_BASE_URL=http://localhost:8888
 
 make build && \
 CPATH=/opt/homebrew/Cellar/tomlplusplus/3.4.0/include \
-SQLSEC_DB_DSN=postgres://sqlsec:sqlsec@localhost:5432/sqlsec?sslmode=disable \
- ./bin/sqlsec serve -p 8888
+SHIELDIQ_DB_DSN=postgres://shieldIQ:shieldIQ@localhost:5432/shieldIQ?sslmode=disable \
+ ./bin/shieldIQ serve -p 8888
 ```
 
 ### Create a Slack Notification Channel
 ```
-./bin/sqlsec api channels create --name="github-dco-1" --type="slack" --config-webhook-url=<your-slack-webhook-url>
+./bin/shieldIQ api channels create --name="github-dco-1" --type="slack" --config-webhook-url=<your-slack-webhook-url>
 ┌───────────┬────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ Attribute │ Value                                                                                              │
 ├───────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
@@ -40,7 +40,7 @@ SQLSEC_DB_DSN=postgres://sqlsec:sqlsec@localhost:5432/sqlsec?sslmode=disable \
 Test the channel:
 
 ```
-./bin/sqlsec api channels test 23ca692d-cc83-43b2-9f6a-f8d9ab11d51c
+./bin/shieldIQ api channels test 23ca692d-cc83-43b2-9f6a-f8d9ab11d51c
 Test successful: Test message sent
 ```
 
@@ -50,7 +50,7 @@ Test successful: Test message sent
 
 Create a Webhook to receive events from GitHub:
 ```
-./bin/sqlsec api webhooks create --name=github-dco-1 --source=github
+./bin/shieldIQ api webhooks create --name=github-dco-1 --source=github
 
 +------------+------------------------------------------------------------------+
 | Attribute  | Value                                                            |
@@ -82,7 +82,7 @@ Perform a test action in github to verify the Webhook
 Install a pre-defined rule to monitor unreviewed pull requests:
 
 ```
-./bin/sqlsec api rules install --id=github-pull-request-merged-no-reviewers
+./bin/shieldIQ api rules install --id=github-pull-request-merged-no-reviewers
 +-----------------+----------------------------------------------------------------------------------+
 | Attribute       | Value                                                                            |
 +-----------------+----------------------------------------------------------------------------------+
@@ -111,11 +111,11 @@ Install a pre-defined rule to monitor unreviewed pull requests:
 Test the rule:
 
 ```
-./bin/sqlsec api rules test e93c8c06-a8ad-40b0-952d-9b8ced7e0095
+./bin/shieldIQ api rules test e93c8c06-a8ad-40b0-952d-9b8ced7e0095
 ```
 
 Set the rule notification channel:
 
 ``` 
-./bin/sqlsec api rules destinations add <rule-id> <notification-channel-id> 
+./bin/shieldIQ api rules destinations add <rule-id> <notification-channel-id> 
 ```

@@ -2,13 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/turbolytics/sqlsec/internal/db/queries/notificationchannels"
-	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/notificationchannels"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/rules"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/turbolytics/sqlsec/internal"
+	"github.com/turbolytics/shieldIQ/internal"
 )
 
 type DestinationHandlers struct {

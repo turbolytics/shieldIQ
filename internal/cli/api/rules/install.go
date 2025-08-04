@@ -5,7 +5,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/turbolytics/sqlsec/internal"
+	"github.com/turbolytics/shieldIQ/internal"
 )
 
 // Pre-made rules map: name -> SQL

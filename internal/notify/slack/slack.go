@@ -10,7 +10,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/turbolytics/sqlsec/internal/notify"
+	"github.com/turbolytics/shieldIQ/internal/notify"
 )
 
 type SlackNotifier struct{}
@@ -22,7 +22,7 @@ func (s *SlackNotifier) Test(ctx context.Context, cfg map[string]string) error {
 	}
 	msg := notify.Message{
 		Title: "Test Notification",
-		Body:  "This is a test notification from SQLSec.",
+		Body:  "This is a test notification from shieldIQ.",
 	}
 	return s.Send(ctx, cfg, msg)
 }

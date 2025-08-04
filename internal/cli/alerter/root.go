@@ -11,7 +11,7 @@ func NewAlerterCmd() *cobra.Command {
 		Use:   "alerter",
 		Short: "Alerter related commands",
 	}
-	cmd.PersistentFlags().StringVar(&dsn, "dsn", os.Getenv("SQLSEC_DB_DSN"), "Postgres DSN for database connection")
+	cmd.PersistentFlags().StringVar(&dsn, "dsn", os.Getenv("SHIELDIQ_DB_DSN"), "Postgres DSN for database connection")
 	cmd.AddCommand(NewRunCmd(&dsn))
 	cmd.AddCommand(NewTestCmd())
 	return cmd

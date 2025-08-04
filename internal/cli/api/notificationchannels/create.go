@@ -25,7 +25,7 @@ func NewCreateCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			baseURL, _ := cmd.Parent().Parent().PersistentFlags().GetString("base-url")
 			if baseURL == "" {
-				return fmt.Errorf("base-url is required, set it using --base-url or SQLSEC_API_BASE_URL environment variable")
+				return fmt.Errorf("base-url is required, set it using --base-url or shieldIQ_API_BASE_URL environment variable")
 			}
 
 			if name == "" || channelType == "" {

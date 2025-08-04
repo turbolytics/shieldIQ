@@ -3,7 +3,7 @@ package server
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/turbolytics/sqlsec/internal/server/handlers"
+	"github.com/turbolytics/shieldIQ/internal/server/handlers"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
