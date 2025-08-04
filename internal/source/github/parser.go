@@ -37,7 +37,7 @@ func (p *GithubParser) ResourceURL(payload map[string]any) (*url.URL, error) {
 	if !ok {
 		return nil, io.EOF
 	}
-	urlStr, ok := pr["url"].(string)
+	urlStr, ok := pr["html_url"].(string)
 	if !ok || urlStr == "" {
 		return nil, io.EOF
 	}
