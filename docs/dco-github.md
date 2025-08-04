@@ -16,7 +16,7 @@
 ## Examples 
 ```
 make build
-export shieldIQ_API_BASE_URL=http://localhost:8888
+export SHIELDIQ_API_BASE_URL=http://localhost:8888
 
 make build && \
 CPATH=/opt/homebrew/Cellar/tomlplusplus/3.4.0/include \

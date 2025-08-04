@@ -18,13 +18,13 @@ func NewCommand() *cobra.Command {
 		Short: "Manage api resources",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if baseURL == "" {
-				return fmt.Errorf("missing required --base-url flag or shieldIQ_API_BASE_URL environment variable")
+				return fmt.Errorf("missing required --base-url flag or SHIELDIQ_API_BASE_URL environment variable")
 			}
 			return nil
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&baseURL, "base-url", "", "Base server URL for API requests (or set shieldIQ_API_BASE_URL)")
+	cmd.PersistentFlags().StringVar(&baseURL, "base-url", "", "Base server URL for API requests (or set SHIELDIQ_API_BASE_URL)")
 	cobra.OnInitialize(initBaseURL)
 
 	cmd.AddCommand(webhooks.NewCommand())
@@ -36,6 +36,6 @@ func NewCommand() *cobra.Command {
 
 func initBaseURL() {
 	if baseURL == "" {
-		baseURL = os.Getenv("shieldIQ_API_BASE_URL")
+		baseURL = os.Getenv("SHIELDIQ_API_BASE_URL")
 	}
 }
