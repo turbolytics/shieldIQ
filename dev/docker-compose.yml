@@ -3,17 +3,17 @@ version: "3.9"
 services:
   postgres:
     image: postgres:15
-    container_name: sqlsec_postgres
+    container_name: shieldIQ_postgres
     environment:
-      POSTGRES_USER: sqlsec
-      POSTGRES_PASSWORD: sqlsec
-      POSTGRES_DB: sqlsec
+      POSTGRES_USER: shieldIQ
+      POSTGRES_PASSWORD: shieldIQ
+      POSTGRES_DB: shieldIQ
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "sqlsec"]
+      test: ["CMD", "pg_isready", "-U", "shieldIQ"]
       interval: 5s
       timeout: 5s
       retries: 5

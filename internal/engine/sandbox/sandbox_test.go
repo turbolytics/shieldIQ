@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 
-	events "github.com/turbolytics/sqlsec/internal/db/queries/events"
-	rules "github.com/turbolytics/sqlsec/internal/db/queries/rules"
+	events "github.com/turbolytics/shieldIQ/internal/db/queries/events"
+	rules "github.com/turbolytics/shieldIQ/internal/db/queries/rules"
 )
 
 type stubEventsQueries struct{}

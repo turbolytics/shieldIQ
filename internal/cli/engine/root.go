@@ -5,15 +5,15 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/apache/arrow-adbc/go/adbc/drivermgr"
-	"github.com/turbolytics/sqlsec/internal/db/queries/alerts"
-	"github.com/turbolytics/sqlsec/internal/db/queries/events"
-	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/alerts"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/events"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/rules"
 	"go.uber.org/zap"
 	"log"
 	"os"
 
 	"github.com/spf13/cobra"
-	enginepkg "github.com/turbolytics/sqlsec/internal/engine"
+	enginepkg "github.com/turbolytics/shieldIQ/internal/engine"
 )
 
 func NewCmd() *cobra.Command {
@@ -23,7 +23,7 @@ func NewCmd() *cobra.Command {
 		Short: "Engine related commands",
 	}
 
-	cmd.PersistentFlags().StringVar(&dsn, "dsn", os.Getenv("SQLSEC_DB_DSN"), "Postgres DSN (or set SQLSEC_DB_DSN env var)")
+	cmd.PersistentFlags().StringVar(&dsn, "dsn", os.Getenv("SHIELDIQ_DB_DSN"), "Postgres DSN (or set SHIELDIQ_DB_DSN env var)")
 	cmd.AddCommand(newRunCmd(&dsn))
 	cmd.AddCommand(newTestCmd())
 
@@ -62,7 +62,7 @@ func newRunCmd(dsn *string) *cobra.Command {
 			}()
 
 			if *dsn == "" {
-				log.Fatal("Postgres DSN must be set via --dsn or SQLSEC_DB_DSN env var")
+				log.Fatal("Postgres DSN must be set via --dsn or SHIELDIQ_DB_DSN env var")
 			}
 			dbConn, err := sql.Open("postgres", *dsn)
 			if err != nil {

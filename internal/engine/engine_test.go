@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"github.com/google/uuid"
-	"github.com/turbolytics/sqlsec/internal/db/queries/alerts"
-	"github.com/turbolytics/sqlsec/internal/db/queries/events"
-	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/alerts"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/events"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/rules"
 	"go.uber.org/zap"
 	"testing"
 )

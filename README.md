@@ -1,6 +1,6 @@
-# sqlsec
+# shieldIQ
 
-sqlsec is a lightweight SIEM for modern SaaS
+shieldIQ is a lightweight SIEM for modern SaaS
 
 # Quick Start
 
@@ -59,15 +59,15 @@ curl -X POST http://localhost:8888/api/notification-channels \
 # Development
 
 ```
-docker exec -i sqlsec_postgres psql -U sqlsec -d sqlsec < schema.sql
+docker exec -i shieldIQ_postgres psql -U shieldIQ -d shieldIQ < schema.sql
 ```
 
 ```
-SQLSEC_DB_DSN=postgres://sqlsec:sqlsec@localhost:5432/sqlsec?sslmode=disable go run cmd/sqlsec/main.go serve -p 8888
+SHIELDIQ_DB_DSN=postgres://shieldIQ:shieldIQ@localhost:5432/shieldIQ?sslmode=disable go run cmd/shieldIQ/main.go serve -p 8888
 ```
 
 ```
-docker exec -it sqlsec_postgres psql -U sqlsec
+docker exec -it shieldIQ_postgres psql -U shieldIQ
 ```
 
 - Install Duckdb
@@ -79,12 +79,12 @@ DYLD_LIBRARY_PATH=/opt/homebrew/lib make test
 
 ```
 export DYLD_LIBRARY_PATH=/opt/homebrew/lib:$DYLD_LIBRARY_PATH
-SQLSEC_DB_DSN=postgres://sqlsec:sqlsec@localhost:5432/sqlsec?sslmode=disable go run cmd/sqlsec/main.go engine run
+SHIELDIQ_DB_DSN=postgres://shieldIQ:shieldIQ@localhost:5432/shieldIQ?sslmode=disable go run cmd/shieldIQ/main.go engine run
 2025-07-16T18:41:27.217-0400    INFO    engine/root.go:79       Starting engine daemon...
 ```
 
 - Start the Alerter Daemon
 
 ```
-SQLSEC_DB_DSN=postgres://sqlsec:sqlsec@localhost:5432/sqlsec?sslmode=disable go run cmd/sqlsec/main.go alerter run
+SHIELDIQ_DB_DSN=postgres://shieldIQ:shieldIQ@localhost:5432/shieldIQ?sslmode=disable go run cmd/shieldIQ/main.go alerter run
 ```

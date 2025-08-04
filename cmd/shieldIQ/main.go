@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/turbolytics/sqlsec/internal/cli"
+	"github.com/turbolytics/shieldIQ/internal/cli"
 )
 
 func main() {

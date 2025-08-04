@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"github.com/google/uuid"
-	"github.com/turbolytics/sqlsec/internal/db/queries/alerts"
-	"github.com/turbolytics/sqlsec/internal/db/queries/notificationchannels"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/alerts"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/notificationchannels"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

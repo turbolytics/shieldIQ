@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/turbolytics/sqlsec/internal/source/github"
+	"github.com/turbolytics/shieldIQ/internal/source/github"
 )
 
 type Source string

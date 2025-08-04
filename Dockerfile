@@ -16,14 +16,14 @@ ENV CPATH=/usr/local/include
 WORKDIR /app
 COPY . .
 
-RUN go build -v -o /app/bin/sqlsec ./cmd/sqlsec
+RUN go build -v -o /app/bin/shieldIQ ./cmd/shieldIQ
 
 
 # Runtime stage
 FROM debian:bullseye-slim
 
 WORKDIR /app
-COPY --from=builder /app/bin/sqlsec /usr/local/bin/sqlsec
+COPY --from=builder /app/bin/shieldIQ /usr/local/bin/shieldIQ
 
 EXPOSE 8888
-ENTRYPOINT ["/usr/local/bin/sqlsec"]
+ENTRYPOINT ["/usr/local/bin/shieldIQ"]

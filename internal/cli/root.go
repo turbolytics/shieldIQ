@@ -3,19 +3,19 @@ package cli
 import (
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
-	"github.com/turbolytics/sqlsec/internal/cli/alerter"
-	"github.com/turbolytics/sqlsec/internal/cli/api"
-	"github.com/turbolytics/sqlsec/internal/cli/api/webhooks"
-	"github.com/turbolytics/sqlsec/internal/cli/engine"
-	"github.com/turbolytics/sqlsec/internal/cli/serve"
+	"github.com/turbolytics/shieldIQ/internal/cli/alerter"
+	"github.com/turbolytics/shieldIQ/internal/cli/api"
+	"github.com/turbolytics/shieldIQ/internal/cli/api/webhooks"
+	"github.com/turbolytics/shieldIQ/internal/cli/engine"
+	"github.com/turbolytics/shieldIQ/internal/cli/serve"
 	"log"
 )
 
 func NewRootCommand() *cobra.Command {
 	/*
-		connStr := os.Getenv("SQLSEC_DB_DSN")
+		connStr := os.Getenv("SHIELDIQ_DB_DSN")
 		if connStr == "" {
-			log.Fatal("SQLSEC_DB_DSN environment variable not set")
+			log.Fatal("SHIELDIQ_DB_DSN environment variable not set")
 		}
 
 		conn, err := sql.Open("postgres", connStr)
@@ -28,8 +28,8 @@ func NewRootCommand() *cobra.Command {
 	*/
 
 	rootCmd := &cobra.Command{
-		Use:   "sqlsec",
-		Short: "SQLSec – Security Alerting for SaaS Webhooks",
+		Use:   "shieldIQ",
+		Short: "shieldIQ – Security Alerting for SaaS Webhooks",
 	}
 
 	// Register subcommands

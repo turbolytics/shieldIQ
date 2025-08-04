@@ -2,7 +2,7 @@ package rules
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/turbolytics/sqlsec/internal/cli/api/rules/destinations"
+	"github.com/turbolytics/shieldIQ/internal/cli/api/rules/destinations"
 )
 
 func NewCommand() *cobra.Command {

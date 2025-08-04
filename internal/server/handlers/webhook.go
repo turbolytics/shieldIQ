@@ -4,17 +4,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/turbolytics/sqlsec/internal/auth"
-	"github.com/turbolytics/sqlsec/internal/db/queries/events"
-	"github.com/turbolytics/sqlsec/internal/db/queries/webhooks"
-	"github.com/turbolytics/sqlsec/internal/source"
+	"github.com/turbolytics/shieldIQ/internal/auth"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/events"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/webhooks"
+	"github.com/turbolytics/shieldIQ/internal/source"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/turbolytics/sqlsec/internal"
+	"github.com/turbolytics/shieldIQ/internal"
 )
 
 type CreateWebhookRequest struct {

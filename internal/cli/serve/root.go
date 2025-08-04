@@ -2,12 +2,12 @@ package serve
 
 import (
 	"database/sql"
-	"github.com/turbolytics/sqlsec/internal/db/queries/events"
-	"github.com/turbolytics/sqlsec/internal/db/queries/notificationchannels"
-	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
-	"github.com/turbolytics/sqlsec/internal/db/queries/webhooks"
-	"github.com/turbolytics/sqlsec/internal/server"
-	"github.com/turbolytics/sqlsec/internal/server/handlers"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/events"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/notificationchannels"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/rules"
+	"github.com/turbolytics/shieldIQ/internal/db/queries/webhooks"
+	"github.com/turbolytics/shieldIQ/internal/server"
+	"github.com/turbolytics/shieldIQ/internal/server/handlers"
 	"log"
 	"net/http"
 	"os"
@@ -21,7 +21,7 @@ func NewCommand() *cobra.Command {
 	var port string
 	cmd := &cobra.Command{
 		Use:   "serve",
-		Short: "Start the SQLSec API server",
+		Short: "Start the shieldIQ API server",
 		Run: func(cmd *cobra.Command, args []string) {
 			logger, err := zap.NewProduction()
 			if err != nil {
@@ -29,9 +29,9 @@ func NewCommand() *cobra.Command {
 			}
 			defer logger.Sync()
 
-			dsn := os.Getenv("SQLSEC_DB_DSN")
+			dsn := os.Getenv("SHIELDIQ_DB_DSN")
 			if dsn == "" {
-				logger.Fatal("SQLSEC_DB_DSN environment variable not set")
+				logger.Fatal("SHIELDIQ_DB_DSN environment variable not set")
 			}
 
 			dbConn, err := sql.Open("postgres", dsn)
