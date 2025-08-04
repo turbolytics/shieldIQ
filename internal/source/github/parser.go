@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 )
 
 type GithubParser struct{}
@@ -29,4 +30,16 @@ func (p *GithubParser) Type(r *http.Request) (string, error) {
 		return "", io.EOF
 	}
 	return eventType, nil
+}
+
+func (p *GithubParser) ResourceURL(payload map[string]any) (*url.URL, error) {
+	pr, ok := payload["pull_request"].(map[string]any)
+	if !ok {
+		return nil, io.EOF
+	}
+	urlStr, ok := pr["html_url"].(string)
+	if !ok || urlStr == "" {
+		return nil, io.EOF
+	}
+	return url.Parse(urlStr)
 }

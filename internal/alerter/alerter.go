@@ -7,23 +7,36 @@ import (
 	"errors"
 	"fmt"
 	"github.com/turbolytics/sqlsec/internal/db/queries/alerts"
+	"github.com/turbolytics/sqlsec/internal/db/queries/events"
 	"github.com/turbolytics/sqlsec/internal/db/queries/rules"
 	"github.com/turbolytics/sqlsec/internal/notify"
+	"github.com/turbolytics/sqlsec/internal/source"
 	"go.uber.org/zap"
+	"net/url"
 	"time"
 )
 
 type Alerter struct {
 	alertQueries alerts.Querier
 	ruleQueries  rules.Querier
+	eventQuerier events.Querier
 	notifyReg    *notify.Registry
 	logger       *zap.Logger
 	db           *sql.DB
 }
 
-func NewAlerter(db *sql.DB, alertQ alerts.Querier, ruleQ rules.Querier, notifyReg *notify.Registry, logger *zap.Logger) *Alerter {
+func NewAlerter(
+	db *sql.DB,
+	alertQ alerts.Querier,
+	ruleQ rules.Querier,
+	eventQ events.Querier,
+	notifyReg *notify.Registry,
+	logger *zap.Logger,
+) *Alerter {
+
 	return &Alerter{
 		alertQueries: alertQ,
+		eventQuerier: eventQ,
 		ruleQueries:  ruleQ,
 		notifyReg:    notifyReg,
 		logger:       logger,
@@ -52,29 +65,67 @@ func (a *Alerter) ExecuteOnce(ctx context.Context) error {
 	alertID, err := a.alertQueries.FetchNextAlertForProcessing(ctx, sql.NullString{})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			a.logger.Info("No alerts to process at this time")
 			return nil // No event to process
 		}
 		a.logger.Error("Failed to fetch next alert for processing", zap.Error(err))
 		return err
 	}
+	a.logger.Info("Processing alert", zap.String("alert_id", alertID.String()))
+
 	// 2. Get alert details
 	alert, err := a.alertQueries.GetAlertByID(ctx, alertID)
 	if err != nil {
 		a.logger.Error("Failed to get alert by ID", zap.Error(err))
 		return err
 	}
+
+	// 2b. Get rule details
+	rule, err := a.ruleQueries.GetRuleByID(ctx, rules.GetRuleByIDParams{ID: alert.RuleID})
+	if err != nil {
+		a.logger.Error("Failed to get rule by ID", zap.Error(err))
+		return err
+	}
+	a.logger.Info("Fetched rule for alert", zap.String("rule_id", rule.ID.String()), zap.String("rule_name", rule.Name))
+
+	// 2c. Get event details
+	event, err := a.eventQuerier.GetEventByID(ctx, alert.EventID)
+	if err != nil {
+		a.logger.Error("Failed to get event by ID", zap.Error(err))
+		return err
+	}
+	a.logger.Info("Fetched event for alert", zap.String("event_id", event.ID.String()), zap.String("event_source", event.Source), zap.String("event_type", event.EventType))
+
+	// 2d. Parse event payload and get resource link
+	var payload map[string]any
+	if err := json.Unmarshal(event.RawPayload, &payload); err != nil {
+		a.logger.Error("Failed to parse event payload", zap.Error(err))
+	}
+	var resourceLink *url.URL
+	if parser := source.DefaultRegistry.GetParser(source.Source(event.Source)); parser != nil {
+		if urlObj, err := parser.ResourceURL(payload); err == nil && urlObj != nil {
+			resourceLink = urlObj
+		}
+	}
+	if resourceLink != nil {
+		a.logger.Info("Resource link generated for event", zap.String("resource_link", resourceLink.String()))
+	}
+
 	// 3. Get notification channels for the rule
 	channels, err := a.ruleQueries.ListNotificationChannelsForRule(ctx, alert.RuleID)
 	if err != nil {
 		a.logger.Error("Failed to list notification channels for rule", zap.Error(err))
 		return err
 	}
+	a.logger.Info("Fetched notification channels for rule", zap.Int("channel_count", len(channels)))
+
 	// 4. Send alert to each channel
 	for _, ch := range channels {
 		notifier, err := a.notifyReg.Get(notify.ChannelType(ch.Type))
 		if err != nil {
-			a.logger.Error("No notifier for channel type", zap.String("type", ch.Type), zap.Error(err))
-			continue
+			// A missing notifier is a fatal error, we should not continue processing
+			a.logger.Fatal("No notifier for channel type", zap.String("type", ch.Type), zap.Error(err))
+			panic("No notifier for channel type: " + ch.Type)
 		}
 		// Parse ch.Config (json.RawMessage) into map[string]any
 		var cfg map[string]string
@@ -82,36 +133,54 @@ func (a *Alerter) ExecuteOnce(ctx context.Context) error {
 			a.logger.Error("Failed to parse channel config", zap.Error(err))
 			continue
 		}
-		// TODO: Render the alert message, include the source, and the rule SQL, and the Level
-		msg := notify.Message{Title: "Alert", Body: fmt.Sprintf("Alerted from: %d", alert.ID)} // You may want to customize this
+		msg := notify.Message{
+			Title:              "Alert",
+			Body:               fmt.Sprintf("Alerted from alert: %s", alert.ID.String()),
+			ResourceLink:       resourceLink,
+			EventSource:        event.Source,
+			EventType:          event.EventType,
+			RuleSQL:            rule.Sql,
+			RuleID:             rule.ID.String(),
+			RuleName:           rule.Name,
+			RuleDescription:    rule.Description.String,
+			RuleEvaluationType: rule.EvalType,
+			RuleAlertLevel:     rule.AlertLevel,
+		}
+		a.logger.Info("Delivering alert to channel", zap.String("channel_id", ch.ID.String()), zap.String("channel_type", ch.Type))
 		deliverErr := notifier.Send(ctx, cfg, msg)
 		status := "delivered"
 		if deliverErr != nil {
 			status = "failed"
-			a.logger.Error("Failed to deliver alert", zap.Error(deliverErr))
+			a.logger.Error("Failed to deliver alert", zap.Error(deliverErr), zap.String("channel_id", ch.ID.String()), zap.String("channel_type", ch.Type))
+		} else {
+			a.logger.Info("Alert delivered successfully", zap.String("channel_id", ch.ID.String()), zap.String("channel_type", ch.Type))
 		}
 		// Save delivery status
 		err = a.alertQueries.InsertAlertDelivery(ctx, alerts.InsertAlertDeliveryParams{
 			AlertID:   alert.ID,
 			ChannelID: ch.ID,
 			Status:    status,
-			Error:     sql.NullString{String: deliverErr.Error(), Valid: deliverErr != nil},
 		})
 		if err != nil {
 			a.logger.Error("Failed to insert alert delivery", zap.Error(err))
 		}
 	}
 
-	// TODO - Should be transactional
+	// TODO - Should be transactional, only mark if all deliveries succeeded
+
 	// 5. Update alert_processing_queue status
 	err = a.alertQueries.MarkAlertProcessingDelivered(ctx, alert.ID)
 	if err != nil {
 		a.logger.Error("Failed to mark alert processing delivered", zap.Error(err))
+	} else {
+		a.logger.Info("Marked alert processing as delivered", zap.String("alert_id", alert.ID.String()))
 	}
 	// 6. Update alert to notified = true
 	err = a.alertQueries.MarkAlertNotified(ctx, alert.ID)
 	if err != nil {
 		a.logger.Error("Failed to mark alert as notified", zap.Error(err))
+	} else {
+		a.logger.Info("Marked alert as notified", zap.String("alert_id", alert.ID.String()))
 	}
 	return nil
 }

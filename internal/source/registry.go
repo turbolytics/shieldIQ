@@ -2,8 +2,16 @@ package source
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/turbolytics/sqlsec/internal/source/github"
+)
+
+type Source string
+
+const (
+	GithubSource Source = "github"
+	// Future: Add more sources like GitlabSource, BitbucketSource, etc.
 )
 
 type Validator interface {
@@ -13,38 +21,39 @@ type Validator interface {
 type Parser interface {
 	Parse(r *http.Request) (map[string]any, error)
 	Type(r *http.Request) (string, error)
+	ResourceURL(payload map[string]any) (*url.URL, error)
 }
 
 type Registry struct {
-	sources    map[string]any
-	validators map[string]Validator
-	parsers    map[string]Parser
+	sources    map[Source]any
+	validators map[Source]Validator
+	parsers    map[Source]Parser
 }
 
 func New() *Registry {
 	return &Registry{
-		sources:    make(map[string]any),
-		validators: make(map[string]Validator),
-		parsers:    make(map[string]Parser),
+		sources:    make(map[Source]any),
+		validators: make(map[Source]Validator),
+		parsers:    make(map[Source]Parser),
 	}
 }
 
 func (r *Registry) Init() {
-	r.sources["github"] = struct{}{}
-	r.validators["github"] = &github.GithubValidator{}
-	r.parsers["github"] = &github.GithubParser{}
+	r.sources[GithubSource] = struct{}{}
+	r.validators[GithubSource] = &github.GithubValidator{}
+	r.parsers[GithubSource] = &github.GithubParser{}
 }
 
-func (r *Registry) IsEnabled(source string) bool {
+func (r *Registry) IsEnabled(source Source) bool {
 	_, ok := r.sources[source]
 	return ok
 }
 
-func (r *Registry) GetValidator(source string) Validator {
+func (r *Registry) GetValidator(source Source) Validator {
 	return r.validators[source]
 }
 
-func (r *Registry) GetParser(source string) Parser {
+func (r *Registry) GetParser(source Source) Parser {
 	return r.parsers[source]
 }
 
