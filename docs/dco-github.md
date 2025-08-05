@@ -119,3 +119,7 @@ Set the rule notification channel:
 ``` 
 ./bin/shieldIQ api rules destinations add <rule-id> <notification-channel-id> 
 ```
+
+### Trigger an event and verify the notification
+
+<img width="1107" height="421" alt="Image" src="https://github.com/user-attachments/assets/d6c1a5cf-5969-4f6e-8fdc-ad3830d362e5" />

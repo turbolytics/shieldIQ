@@ -234,14 +234,7 @@ func (wh *Webhook) Event(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	eventLog := struct {
-		Time    time.Time
-		Payload map[string]any
-	}{
-		Time:    time.Now().UTC(),
-		Payload: payload,
-	}
-	wh.logger.Info("event received", zap.Any("event", eventLog))
+	wh.logger.Info("event received", zap.String("event_id", event.ID.String()))
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("event received and queued"))
 }
