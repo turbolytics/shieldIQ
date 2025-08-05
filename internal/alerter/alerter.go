@@ -65,7 +65,6 @@ func (a *Alerter) ExecuteOnce(ctx context.Context) error {
 	alertID, err := a.alertQueries.FetchNextAlertForProcessing(ctx, sql.NullString{})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			a.logger.Info("No alerts to process at this time")
 			return nil // No event to process
 		}
 		a.logger.Error("Failed to fetch next alert for processing", zap.Error(err))
